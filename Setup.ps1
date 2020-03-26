@@ -1,10 +1,12 @@
 ﻿# Change directory
  $scriptpath = $MyInvocation.MyCommand.Path
  $dir = Split-Path $scriptpath
- cd $dir
+ Set-Location $dir
+
+$ConfigPath = Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'config.json'
 
 # If config file exists prompt if we should overwrite or quit
-if((Test-Path -Path 'config.json')){
+if((Test-Path -Path $ConfigPath)){
     $overwrite = Read-Host 'Config File Exists. Overwrite? [Yn]'
     if( -not ($overwrite -eq '' -or $overwrite.ToLower() -eq 'y') ){
         Write-Host 'Quitting'
@@ -26,4 +28,5 @@ $config = @{
 }
 
 # Save config.json with encrypted password and other config information
-$config | ConvertTo-Json | Out-File -FilePath '.\Config\config.json' -Confirm:$false
+$config | ConvertTo-Json | Out-File -FilePath $ConfigPath -Confirm:$false
+
