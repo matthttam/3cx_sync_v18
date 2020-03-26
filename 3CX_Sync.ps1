@@ -26,7 +26,7 @@ function Test-ConfigPath($path)
 # Change directory
 $scriptpath = $MyInvocation.MyCommand.Path
 $dir = Split-Path $scriptpath
-cd $dir
+Set-Location $dir
 
 ## Verify Config Files Exist
 # Verify Config Exists
