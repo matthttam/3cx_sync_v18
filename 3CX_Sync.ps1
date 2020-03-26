@@ -157,34 +157,11 @@ try
     $NewMappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'NewMapping.json')
     $NewMapping = [Mapping]::New($NewMappingPath)
     $NewMapping.verify(@('Number'))
-    #$blah = $NewMapping.test()
 }
 catch
 {
     Write-Error 'Unexpected Error' -ErrorAction Stop
 }
-
-
-
-# Verify NewMapping Exists
-<#
-$NewMappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'NewMapping.json')
-if(-not (Test-ConfigPath -path $NewMappingPath))
-{
-    Write-Error 'Exitting. NewMapping is required to run this sync.' -ErrorAction Stop
-}else{
-    Write-Verbose 'NewMappingPath.json found'
-}
-#>
-
-# Read NewMapping File
-<#
-try{
-    $NewMapping = (Get-Content -Path $NewMappingPath) | ConvertFrom-Json -ErrorAction Stop # Read Config and convert to json object
-}catch{
-    Write-Error -Message 'Fatal Error! Unable to read NewMapping.json' -ErrorAction Stop
-}
-#>
 
 ## Verify CSV Files exit
 $ImportFilePath = (Join-Path -Path $dir -ChildPath 'Import Files' | Join-Path -ChildPath $config.Config.ImportFilename)
@@ -209,14 +186,6 @@ if(-not $ImportData.Count -gt 0){
     exit
 }
 
-# Verify NewMapping has required fields
-#$CSVExtensionNumberField = $NewMapping.Config.PSObject.Properties | Where-Object {$_.Value -eq 'Number'} | Select-Object -ExpandProperty 'Name'
-#if(-not $CSVExtensionNumberField){
-#    Write-Error ('Fatal Error! NewMapping missing required field Number')
-#    exit
-#}
-#[string]$BaseUrl, [string]$Username, [string] $Password
-#$3CXApiConnection = [APIConnection]::New($config.BaseUrl, $config.Username, $config.Password)
 $3CXApiConnection = [APIConnection]::New($config)
 try{
     $3CXApiConnection.login()
@@ -225,21 +194,14 @@ try{
     exit
 }
 
-
-
-#$test5 = Invoke-WebRequest -Uri "https://owensboro.my3cx.us:5001/api/ExtensionList/set" -WebSession $Session -Method "POST" -Headers @{"x-xsrf-token"="$XSRF"} -ContentType "application/json;charset=UTF-8" -Body "{`"Id`":`"00000`"}"
-#$test5.Content
-
 # Get A List of Extensions
 $Response = $3CXApiConnection.get('ExtensionList')
 $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
 
 $ExtensionListNumber = $ExtensionList | Select-Object -ExpandProperty Number
-$Queue_ExtensionNew = @();
-$Queue_ExtensionUpdate = [System.Collections.ArrayList] @();
+#$Queue_ExtensionNew = @();
+#$Queue_ExtensionUpdate = [System.Collections.ArrayList] @();
 Write-Host $ExtensionList.count 
-
-exit
 
 <#
 function ParseMapping(){
@@ -283,10 +245,9 @@ foreach ($row in $ImportData) {
         continue;
         # Todo - Determine if certain fields are different and if they are queue for update
     }else{
-        $Queue_ExtensionNew += $row
+        #$Queue_ExtensionNew += $row
         Write-Verbose ('Need to Create {0}' -f $row.Number)
     }
 
 # If it doesn't exist, Create
 }
-$Queue_ExtensionNew
