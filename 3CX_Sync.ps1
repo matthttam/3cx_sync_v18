@@ -2,10 +2,20 @@
 Using module .\Modules\Mapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 
+# Check Required Modules
+if (-not (Get-Module -ListAvailable -Name PSFramework)) {
+    Install-Module PSFramework -Force -Confirm:$false
+} 
+
 # Change directory
 $scriptpath = $MyInvocation.MyCommand.Path
 $dir = Split-Path $scriptpath
 Set-Location $dir
+
+# Setup Logging
+$logFile = Join-Path -path $dir -ChildPath 'log' | Join-Path -ChildPath "log-$(Get-date -f 'yyyyMMddHHmmss').txt";
+Set-PSFLoggingProvider -Name logfile -FilePath $logFile -Enabled $true;
+Write-PSFMessage -Level Output -Message 'Sync Started'
 
 ## Import Config config.json
 try
@@ -65,9 +75,6 @@ try{
 }
 
 # Get A List of Extensions
-#$3CXApiConnection.Endpoints.ExtensionList.New()
-#exit
-#$Response = $3CXApiConnection.get('ExtensionList')
 $Response = $3CXApiConnection.Endpoints.ExtensionList.Get()
 $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
 $ExtensionListNumber = $ExtensionList | Select-Object -ExpandProperty Number
@@ -90,9 +97,16 @@ foreach ($row in $ExtensionImportCSV.Config) {
             $payload = $NewMapping.GetUpdatePayload( $NewExtension, [string] $CSVHeader, $row.$CSVHeader)
             $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
         }
-        $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)
+        try {
+            $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)    
+            Write-PSFMessage -Level Output -Message ('Created Extension: {0}' -f $row.Number)
+        }
+        catch {
+            Write-PSFMessage -Level Output -Message ('Failed to Create Extension: {0}' -f $row.Number)
+        }
+        
         
     }
 
-# If it doesn't exist, Create
 }
+Write-PSFMessage -Level Output -Message 'Sync Ended'
