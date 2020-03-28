@@ -16,7 +16,7 @@ class Config
         $this.Filename = Split-Path $FullPath -Leaf
         $this.Format = $Format
         # Verify File Exists
-        if(-not (Test-ConfigPath -path $FullPath))
+        if(-not (Test-Path $FullPath))
         {
             throw [System.IO.FileNotFoundException]::new("Could not find file: $FullPath", $FullPath)
         }else{

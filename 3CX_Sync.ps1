@@ -1,6 +1,6 @@
 ﻿Using module .\Modules\Config.psm1
 Using module .\Modules\Mapping.psm1
-Using module .\Modules\APIConnection.psm1
+Using module .\Modules\3CX\APIConnection.psm1
 
 # Change directory
 $scriptpath = $MyInvocation.MyCommand.Path
@@ -25,7 +25,7 @@ catch [System.IO.FileNotFoundException]
 }
 catch
 {
-    Write-Error 'Unexpected Error' -ErrorAction Stop
+    Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
 }
 
 ## Import Config NewMapping.json
@@ -37,7 +37,7 @@ try
 }
 catch
 {
-    Write-Error 'Unexpected Error' -ErrorAction Stop
+    Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
 }
 
 ## Import CSV File
@@ -48,7 +48,7 @@ try
 }
 catch
 {
-    Write-Error 'Unexpected Error' -ErrorAction Stop
+    Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
 }
 
 ## Verify Config Files
@@ -65,50 +65,33 @@ try{
 }
 
 # Get A List of Extensions
-$Response = $3CXApiConnection.get('ExtensionList')
+#$3CXApiConnection.Endpoints.ExtensionList.New()
+#exit
+#$Response = $3CXApiConnection.get('ExtensionList')
+$Response = $3CXApiConnection.Endpoints.ExtensionList.Get()
 $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
-
 $ExtensionListNumber = $ExtensionList | Select-Object -ExpandProperty Number
 
-function New-3CXExtension([ApiConnection] $Connection)
-{
-    return $Connection.get('ExtensionList/new')
-}
-
-function Update-3CXExtension()
-<#
-
-function BuildExtensionUpdateParameters(){
-    params(
-        $ObjectID,
-        $Mapping,
-        $Data
-    )
-    $CSVHeaders = $Mapping.PSObject.Properties | Select-Object -ExpandProperty 'Name'
-    $3CXPaths = $NewMapping.PSObject.Properties | Select-Object -ExpandProperty 'Value'
-    foreach($
-    $return = @{
-        #Path = @{
-        #    
-        #},
-        #PropertyValue = '00001ab'
-    }
-
-    #{"Path":{"ObjectId":"40","PropertyPath":[{"Name":"Number"}]},"PropertyValue":"00001ab"}
-
-
-    return @{}
-}
-#>
 # Loop over CSV
-foreach ($row in $ImportData) {
+foreach ($row in $ExtensionImportCSV.Config) {
+    $CSVNumberHeader = $NewMapping.Config.Number
     #If it exists, skip
-    if($row.$CSVExtensionNumberField -in $ExtensionListNumber){
+    if($row.$CSVNumberHeader -in $ExtensionListNumber){
         continue;
         # Todo - Determine if certain fields are different and if they are queue for update
     }else{
-        #$Queue_ExtensionNew += $row
         Write-Verbose ('Need to Create {0}' -f $row.Number)
+        # Begin building new extension
+        $NewExtensionResult = $3CXApiConnection.Endpoints.ExtensionList.New()
+        $NewExtension = $NewExtensionResult.Content | ConvertFrom-Json -ErrorAction Stop
+        
+        $keys = $row.PSObject.Properties | Select-Object -ExpandProperty 'Name'
+        foreach( $CSVHeader in $keys){
+            $payload = $NewMapping.GetUpdatePayload( $NewExtension, [string] $CSVHeader, $row.$CSVHeader)
+            $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+        }
+        $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)
+        
     }
 
 # If it doesn't exist, Create
