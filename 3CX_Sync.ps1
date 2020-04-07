@@ -7,9 +7,12 @@ Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
 Param(
 
 )
+
+[Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
 # Check Required Modules
 if (-not (Get-Module -ListAvailable -Name PSFramework)) {
-    Install-Module PSFramework -Force -Confirm:$false
+	Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+    Install-Module PSFramework -Scope CurrentUser -Force -Confirm:$false
 } 
 
 # Change directory
