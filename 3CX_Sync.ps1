@@ -3,6 +3,10 @@ Using module .\Modules\Mapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
 
+[CmdletBinding(SupportsShouldProcess)]
+Param(
+
+)
 # Check Required Modules
 if (-not (Get-Module -ListAvailable -Name PSFramework)) {
     Install-Module PSFramework -Force -Confirm:$false
@@ -113,24 +117,34 @@ foreach ($row in $ExtensionImportCSV.Config) {
             {
                 $UpdateRequired = $true
                 $payload = $CurrentExtension.GetUpdatePayload($UpdateMapping.GetParsedConfig($CSVHeader), $CSVValue)
-                $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
-                Write-PSFMessage -Level Output -Message ('Staged update to extension "{0}" for field "{1}". Old Value: "{2}" NewValue: "{3}"' -f ($row.$CSVNumberHeader, $CSVHeader, $CurrentExtensionValue, $CSVValue))
+                $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CurrentExtensionValue, $CSVValue))
+                if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                {
+                    $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
             }
 
         }
         if($UpdateRequired){
             try {
-                $response = $3CXApiConnection.Endpoints.ExtensionList.Save($CurrentExtension)
-                Write-PSFMessage -Level Output -Message ('Updated Extension: "{0}"' -f $row.$CSVNumberHeader)
+
+                $message = ("Updated Extension: '{0}'" -f $row.$CSVNumberHeader)
+                if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                {
+                    $response = $3CXApiConnection.Endpoints.ExtensionList.Save($CurrentExtension)
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
+                
             }
             catch {
-                Write-PSFMessage -Level Critical -Message ('Failed to Update Extension: "{0}"' -f $row.$CSVNumberHeader)
+                Write-PSFMessage -Level Critical -Message ("Failed to Update Extension: '{0}'" -f $row.$CSVNumberHeader)
             }
         }
     
     # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
     }else{
-        Write-Verbose ('Need to Create Extension: "{0}"' -f $row.$CSVNumberHeader)
+        Write-Verbose ("Need to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
         # Begin building new extension
         $NewExtensionResult = $3CXApiConnection.Endpoints.ExtensionList.New()
         $NewExtensionObject = $NewExtensionResult.Content | ConvertFrom-Json -ErrorAction Stop
@@ -139,21 +153,32 @@ foreach ($row in $ExtensionImportCSV.Config) {
         foreach( $CSVHeader in $NewMappingCSVKeys)
         {
             try {
-            $NewExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
-            $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
-            $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
-            $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                $NewExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
+                $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
+                $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
+
+                $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CSVValue))
+                if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                {
+                    $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
+                
             } catch {
-                Write-PSFMessage -Level Critical -Message ('Failed to Create Extension "{0}" due to a staging error on update parameters.' -f ($row.$CSVNumberHeader))
+                Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($row.$CSVNumberHeader))
                 continue
             }
         }
         try {
-            $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)    
-            Write-PSFMessage -Level Output -Message ('Created Extension: "{0}"' -f $row.$CSVNumberHeader)
+            $message = ("Created Extension: '{0}'" -f $row.$CSVNumberHeader)
+            if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+            {
+                $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)    
+                Write-PSFMessage -Level Output -Message ($message)
+            }
         }
         catch {
-            Write-PSFMessage -Level Critical -Message ('Failed to Create Extension: "{0}"' -f $row.$CSVNumberHeader)
+            Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
         }
         
         
