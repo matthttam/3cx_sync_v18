@@ -12,9 +12,9 @@ Class ExtensionList : Endpoint
         return $this.APIConnection.post('ExtensionList/new')
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] Set()
+    [Microsoft.PowerShell.Commands.WebResponseObject] Set($payload)
     {
-        return $this.APIConnection.post('ExtensionList/set')
+        return $this.APIConnection.post('ExtensionList/set', @{'Body' = ($payload | ConvertTo-Json )})
     }
 
     [Microsoft.PowerShell.Commands.WebResponseObject] Update($payload)
