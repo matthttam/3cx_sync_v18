@@ -89,10 +89,8 @@ try{
 # Get A List of Extensions
 $Response = $3CXApiConnection.Endpoints.ExtensionList.Get()
 $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
-#$ExtensionListNumber = $ExtensionList | Select-Object -ExpandProperty Number
 $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionList)
 $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
-#$ExtensionNumbers =  $Extensions | Select-Object -property object | Select-object -ExpandProperty object | Select-Object -ExpandProperty Number
 $ExtensionNumbers = $Extensions | Select-Object -ExpandProperty id
 
 $CSVNumberHeader = $NewMapping.Config.Number
