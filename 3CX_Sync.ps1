@@ -8,7 +8,9 @@ Param(
 
 )
 
+# Set security protocols that are supported
 [Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
+
 # Check Required Modules
 if (-not (Get-Module -ListAvailable -Name PSFramework)) {
 	Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted

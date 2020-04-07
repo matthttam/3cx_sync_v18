@@ -1,5 +1,6 @@
 Using module ..\Config.psm1
 Using module .\Endpoints\ExtensionList.psm1
+
 class APIConnection
 {
     [string]$BaseUrl
@@ -38,17 +39,17 @@ class APIConnection
         }
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] get([string]$Path)
+    [PSObject] get([string]$Path)
     {
         $parameters = $this.ConnectionSettings
         return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters)
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] post([string]$Path)
+    [PSObject] post([string]$Path)
     {
         return $this.post($Path, @{})
     }
-    [Microsoft.PowerShell.Commands.WebResponseObject] post([string]$Path, [hashtable] $Options)
+    [PSObject] post([string]$Path, [hashtable] $Options)
     {
         $parameters = $this.ConnectionSettings
         return Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options
