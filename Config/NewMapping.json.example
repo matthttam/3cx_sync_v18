@@ -1,0 +1,18 @@
+# The following is an example mapping for new extensions. The left column is a dot separated API path. The right column is the CSV header. Note the API path is case sensative. Make a copy of this file and remove this comment; adjust as needed.
+# Note that Number is a required field
+{
+	"Number":  "Number",
+	"FirstName":  "FirstName",
+	"LastName":  "LastName",
+	"Email":  "Email",
+	"VMPin":  "VMPIN",
+	"VMEmailOptions":  "VMEmailOptions",
+	"OutboundCallerId":  "OutboundCallerId",
+    "SendEmailMissedCalls":  "SendEmailMissedCalls",
+    "Disabled":  "Disabled",
+	"MyPhoneStartUpScreen":  "MyPhoneStartUpScreen",
+    "AccessPassword":  "AccessPassword",
+    "AllowToUseHotdesking":  "AllowToUseHotdesking",
+	"MyPhoneUseIn3cxPhoneMode":  "MyPhoneUseIn3cxPhoneMode",
+	"ForwardingAvailable.RingExtensionAndMobile": "RingBoth"
+}

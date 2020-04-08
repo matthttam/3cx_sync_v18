@@ -1,11 +1,31 @@
 ﻿Using module .\Modules\Config.psm1
 Using module .\Modules\Mapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
+Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
+
+[CmdletBinding(SupportsShouldProcess)]
+Param(
+
+)
+
+# Set security protocols that are supported
+[Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
+
+# Check Required Modules
+if (-not (Get-Module -ListAvailable -Name PSFramework)) {
+	Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+    Install-Module PSFramework -Scope CurrentUser -Force -Confirm:$false
+} 
 
 # Change directory
 $scriptpath = $MyInvocation.MyCommand.Path
 $dir = Split-Path $scriptpath
 Set-Location $dir
+
+# Setup Logging
+$logFile = Join-Path -path $dir -ChildPath 'log' | Join-Path -ChildPath "log-$(Get-date -f 'yyyyMMdd').txt";
+Set-PSFLoggingProvider -Name logfile -FilePath $logFile -Enabled $true;
+Write-PSFMessage -Level Output -Message 'Sync Started'
 
 ## Import Config config.json
 try
@@ -40,6 +60,17 @@ catch
     Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
 }
 
+## Import Config UpdateMapping.json
+try
+{
+    $UpdateMappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'UpdateMapping.json')
+    $UpdateMapping = [Mapping]::New($UpdateMappingPath)
+}
+catch
+{
+    Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+}
+
 ## Import CSV File
 try
 {
@@ -65,34 +96,98 @@ try{
 }
 
 # Get A List of Extensions
-#$3CXApiConnection.Endpoints.ExtensionList.New()
-#exit
-#$Response = $3CXApiConnection.get('ExtensionList')
 $Response = $3CXApiConnection.Endpoints.ExtensionList.Get()
 $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
-$ExtensionListNumber = $ExtensionList | Select-Object -ExpandProperty Number
+$ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionList)
+$Extensions = $ExtensionFactory.makeExtension($ExtensionList)
+$ExtensionNumbers = $Extensions | Select-Object -ExpandProperty id
+
+$CSVNumberHeader = $NewMapping.Config.Number
+$UpdateMappingCSVKeys = $UpdateMapping.GetConfigCSVKeys()
+$NewMappingCSVKeys = $NewMapping.GetConfigCSVKeys()
 
 # Loop over CSV
 foreach ($row in $ExtensionImportCSV.Config) {
-    $CSVNumberHeader = $NewMapping.Config.Number
-    #If it exists, skip
-    if($row.$CSVNumberHeader -in $ExtensionListNumber){
-        continue;
-        # Todo - Determine if certain fields are different and if they are queue for update
+    # If the row's CSVNumberHeader does exist in the extentions list, Update
+    if($row.$CSVNumberHeader -in $ExtensionNumbers){
+        $CurrentExtension = $ExtensionFactory.makeExtension($row.$CSVNumberHeader)
+
+        $UpdateRequired = $false
+        foreach($CSVHeader in $UpdateMappingCSVKeys)
+        {
+            $CurrentExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($UpdateMapping.GetParsedConfigValues($CSVHeader))
+            $CurrentExtensionValue = $CurrentExtension.GetObjectValue($CurrentExtensionValueAttributeInfo)
+            $CSVValue = $UpdateMapping.ConvertToType( $row.$CSVHeader, $CurrentExtensionValueAttributeInfo )
+            if( $CurrentExtensionValue -ne $CSVValue)
+            {
+                $UpdateRequired = $true
+                $payload = $CurrentExtension.GetUpdatePayload($UpdateMapping.GetParsedConfig($CSVHeader), $CSVValue)
+                $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CurrentExtensionValue, $CSVValue))
+                if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                {
+                    $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
+            }
+
+        }
+        if($UpdateRequired){
+            try {
+
+                $message = ("Updated Extension: '{0}'" -f $row.$CSVNumberHeader)
+                if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                {
+                    $response = $3CXApiConnection.Endpoints.ExtensionList.Save($CurrentExtension)
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
+                
+            }
+            catch {
+                Write-PSFMessage -Level Critical -Message ("Failed to Update Extension: '{0}'" -f $row.$CSVNumberHeader)
+            }
+        }
+    
+    # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
     }else{
-        Write-Verbose ('Need to Create {0}' -f $row.Number)
+        Write-Verbose ("Need to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
         # Begin building new extension
         $NewExtensionResult = $3CXApiConnection.Endpoints.ExtensionList.New()
-        $NewExtension = $NewExtensionResult.Content | ConvertFrom-Json -ErrorAction Stop
-        
-        $keys = $row.PSObject.Properties | Select-Object -ExpandProperty 'Name'
-        foreach( $CSVHeader in $keys){
-            $payload = $NewMapping.GetUpdatePayload( $NewExtension, [string] $CSVHeader, $row.$CSVHeader)
-            $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+        $NewExtensionObject = $NewExtensionResult.Content | ConvertFrom-Json -ErrorAction Stop
+        $NewExtension = $ExtensionFactory.makeExtension($NewExtensionObject)
+
+        foreach( $CSVHeader in $NewMappingCSVKeys)
+        {
+            try {
+                $NewExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
+                $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
+                $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
+
+                $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CSVValue))
+                if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                {
+                    $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
+                
+            } catch {
+                Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($row.$CSVNumberHeader))
+                continue
+            }
         }
-        $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)
+        try {
+            $message = ("Created Extension: '{0}'" -f $row.$CSVNumberHeader)
+            if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+            {
+                $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)    
+                Write-PSFMessage -Level Output -Message ($message)
+            }
+        }
+        catch {
+            Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
+        }
+        
         
     }
 
-# If it doesn't exist, Create
 }
+Write-PSFMessage -Level Output -Message 'Sync Ended'

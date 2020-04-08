@@ -1,28 +1,33 @@
-Class ExtensionList
-{
-    $APIConnection
+Using module .\Endpoint.psm1
 
-    ExtensionList($APIConnection)
+Class ExtensionList : Endpoint
+{
+    
+    ExtensionList($APIConnection) : base($APIConnection)
     {
-        $this.APIConnection = $APIConnection
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] New()
+    [PSObject] New()
     {
         return $this.APIConnection.post('ExtensionList/new')
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] Update($payload)
+    [PSObject] Set($payload)
+    {
+        return $this.APIConnection.post('ExtensionList/set', @{'Body' = ($payload | ConvertTo-Json )})
+    }
+
+    [PSObject] Update($payload)
     {
         return $this.APIConnection.post('edit/update', @{'Body' = ($payload | ConvertTo-Json -Depth 10)} )
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] Save($extension)
+    [PSObject] Save($extension)
     {
         return $this.APIConnection.post('edit/save', @{'Body' = ($extension.Id | ConvertTo-Json )})
     }
 
-    [Microsoft.PowerShell.Commands.WebResponseObject] Get()
+    [PSObject] Get()
     {
         return $this.APIConnection.get('ExtensionList')
     }
