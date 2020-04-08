@@ -12,7 +12,7 @@ class APIConnection
     APIConnection( [Config]$config )
     {
         $this.BaseUrl = $config.Config.BaseUrl.Trim('/')
-        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR( ($config.Config.Password | ConvertTo-SecureString))
+        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR( ( ($config.Config.Password | Where-Object -Property 'Username' -EQ ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) | Select-Object -ExpandProperty 'Password') | ConvertTo-SecureString))
         $PlainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR)
         $this.Credentials = ((@{
             Username = $config.Config.Username
@@ -24,7 +24,7 @@ class APIConnection
 
     Login()
     {
-        $LoginResponse = Invoke-WebRequest -Uri ('{0}/login' -f $this.BaseUrl) -Method Post -ContentType "application/json;charset=UTF-8" -Body $this.Credentials.ToString() -SessionVariable 'Session'
+        $LoginResponse = Invoke-WebRequest -Uri ('{0}/login' -f $this.BaseUrl) -Method Post -ContentType "application/json;charset=UTF-8" -Body $this.Credentials.ToString() -SessionVariable 'Session' -UseBasicParsing
         $this.Session = Get-Variable -name Session -ValueOnly
         if( $LoginResponse.Content -ne 'AuthSuccess' ){
             Write-Error 'Failed to authenticate' -ErrorAction Stop
@@ -42,7 +42,7 @@ class APIConnection
     [PSObject] get([string]$Path)
     {
         $parameters = $this.ConnectionSettings
-        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters)
+        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters -UseBasicParsing)
     }
 
     [PSObject] post([string]$Path)
@@ -52,7 +52,7 @@ class APIConnection
     [PSObject] post([string]$Path, [hashtable] $Options)
     {
         $parameters = $this.ConnectionSettings
-        return Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options
+        return Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing
     }
 
 }
