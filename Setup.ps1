@@ -73,7 +73,15 @@ if($username){
 }
 if($password.Length -ne 0){
     #$config.Password += @{([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) = (ConvertFrom-SecureString -SecureString $password)}
-    $config.Password += @{'Username' = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name; 'Password' = (ConvertFrom-SecureString -SecureString $password)}
+    $CurrentUser =  [Environment]::UserDomainNAME + '\' + [Environment]::UserName
+
+    # If user already has stored password
+    $found = $config.Password | Where-Object -Property Username -eq $CurrentUser
+    if($found){
+        $found.Password = (ConvertFrom-SecureString -SecureString $password)
+    }else{
+        $config.Password += @{'Username' = $CurrentUser; 'Password' = (ConvertFrom-SecureString -SecureString $password)}
+    }
 }
 if($url){
     $config.BaseUrl = $url.Trim('/')
@@ -84,3 +92,4 @@ if($importFilename){
 
 # Save config.json with encrypted password and other config information
 Write-Config -ConfigPath $ConfigPath -Config $config
+Write-Host 'Config Setup Complete'

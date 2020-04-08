@@ -11,8 +11,9 @@ class APIConnection
 
     APIConnection( [Config]$config )
     {
+        $CurrentUser =  [Environment]::UserDomainNAME + '\' + [Environment]::UserName
         $this.BaseUrl = $config.Config.BaseUrl.Trim('/')
-        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR( ( ($config.Config.Password | Where-Object -Property 'Username' -EQ ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) | Select-Object -ExpandProperty 'Password') | ConvertTo-SecureString))
+        $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR( ( ($config.Config.Password | Where-Object -Property 'Username' -EQ $CurrentUser | Select-Object -ExpandProperty 'Password') | ConvertTo-SecureString))
         $PlainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR)
         $this.Credentials = ((@{
             Username = $config.Config.Username
