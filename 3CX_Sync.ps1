@@ -2,6 +2,7 @@
 Using module .\Modules\Mapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
+Using module .\Modules\3CX\Entity\GroupFactory.psm1
 
 [CmdletBinding(SupportsShouldProcess)]
 Param(
@@ -101,7 +102,6 @@ $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandPro
 $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionList)
 $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
 $ExtensionNumbers = $Extensions | Select-Object -ExpandProperty id
-
 $CSVNumberHeader = $NewMapping.Config.Number
 $UpdateMappingCSVKeys = $UpdateMapping.GetConfigCSVKeys()
 $NewMappingCSVKeys = $NewMapping.GetConfigCSVKeys()
