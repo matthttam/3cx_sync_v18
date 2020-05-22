@@ -72,7 +72,6 @@ if($username){
     $config.Username = $username
 }
 if($password.Length -ne 0){
-    #$config.Password += @{([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) = (ConvertFrom-SecureString -SecureString $password)}
     $CurrentUser =  [Environment]::UserDomainNAME + '\' + [Environment]::UserName
 
     # If user already has stored password
