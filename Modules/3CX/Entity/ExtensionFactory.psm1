@@ -17,6 +17,7 @@ Class ExtensionFactory
         return [Extension]::new($object, $this._endpoint)
     }
 
+    # Create extension objects from an array of extension objects
     [Array] makeExtension([Array] $objects){
         $return = @()
         foreach($object in $objects)
@@ -26,6 +27,7 @@ Class ExtensionFactory
         return $return
     }
 
+    # Create extension based on specific ID
     [Extension] makeExtension([string] $id)
     {
         $payload = @{"id" = $id}
@@ -33,8 +35,11 @@ Class ExtensionFactory
         $responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Extension]::new($responseObject, $this._endpoint)
     }
+
+    # Create extension as new object
     [Extension] makeExtension()
     {
+        Write-Output 'here';
         $response = $this._endpoint.New()
         $responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Extension]::new($responseObject, $this._endpoint)
