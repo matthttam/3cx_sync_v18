@@ -1,5 +1,6 @@
 ﻿Using module .\Modules\Config.psm1
 Using module .\Modules\Mapping.psm1
+Using module .\Modules\GroupMembershipMapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
 Using module .\Modules\3CX\Entity\GroupFactory.psm1
@@ -89,9 +90,10 @@ if(-NOT $NoExtensions){
     }
 
     # Get A List of Extensions
-    $Response = $3CXApiConnection.Endpoints.ExtensionList.Get()
-    $ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
-    $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionList)
+    $ExtensionList = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+    #$Response = $3CXApiConnection.Endpoints.ExtensionList.Get() 
+    #$ExtensionList = $Response.Content | ConvertFrom-Json | Select-Object -ExpandProperty 'list'
+    $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionListEndpoint)
     $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
     $ExtensionNumbers = $Extensions | Select-Object -ExpandProperty id
     $CSVNumberHeader = $NewMapping.Config.Number
@@ -117,7 +119,7 @@ if(-NOT $NoExtensions){
                     $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CurrentExtensionValue, $CSVValue))
                     if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
                     {
-                        $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                        $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                 }
@@ -129,7 +131,7 @@ if(-NOT $NoExtensions){
                     $message = ("Updated Extension: '{0}'" -f $row.$CSVNumberHeader)
                     if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
                     {
-                        $response = $3CXApiConnection.Endpoints.ExtensionList.Save($CurrentExtension)
+                        $response = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Save($CurrentExtension)
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                     
@@ -143,8 +145,9 @@ if(-NOT $NoExtensions){
         }else{
             Write-Verbose ("Need to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
             # Begin building new extension
-            $NewExtensionResult = $3CXApiConnection.Endpoints.ExtensionList.New()
-            $NewExtensionObject = $NewExtensionResult.Content | ConvertFrom-Json -ErrorAction Stop
+            $NewExtensionObject = $3CXApiConnection.Endpoints.ExtensionListEndpoint.New()
+            #$NewExtensionResult = $3CXApiConnection.Endpoints.ExtensionListEndpoint.New()
+            #$NewExtensionObject = $NewExtensionResult.Content | ConvertFrom-Json -ErrorAction Stop
             $NewExtension = $ExtensionFactory.makeExtension($NewExtensionObject)
 
             foreach( $CSVHeader in $NewMappingCSVKeys)
@@ -157,7 +160,7 @@ if(-NOT $NoExtensions){
                     $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CSVValue))
                     if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
                     {
-                        $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionList.Update($payload)
+                        $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                     
@@ -170,7 +173,7 @@ if(-NOT $NoExtensions){
                 $message = ("Created Extension: '{0}'" -f $row.$CSVNumberHeader)
                 if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
                 {
-                    $response = $3CXApiConnection.Endpoints.ExtensionList.Save($NewExtension)    
+                    $response = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Save($NewExtension)    
                     Write-PSFMessage -Level Output -Message ($message)
                 }
             }
@@ -188,7 +191,7 @@ if(-NOT $NoGroupMemberships){
     ## Import GroupMembership CSV File
     try
     {
-        $GroupMembershipImportCSV = [Config]::New($MappingCOnfig.Config.GroupMembership.Path, [Config]::CSV)
+        $GroupMembershipImportCSV = [Config]::New($MappingConfig.Config.GroupMembership.Path, [Config]::CSV)
         #Verify ImportData isn't Empty
         if(-not $GroupMembershipImportCSV.Config.Count -gt 0){
             Write-Error 'Import File is Empty' -ErrorAction Stop
@@ -198,16 +201,19 @@ if(-NOT $NoGroupMemberships){
     {
         Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
-    # Parse GroupMapping.json file
-    # Get A List of Extensions
-    #$Response = $3CXApiConnection.Endpoints.ExtensionList.Get()
-    
+
+    # Get GroupMembershipMapping
+    $GroupMembershipMapping = [GroupMembershipMapping]::New($MappingConfig.Config.GroupMembership.Groups)
+        
     # Get Groups
-    #$Response = $3CXApiConnection.Endpoints.GroupList.Get();
-    
-    #Loop: Groups
+    $GroupList = $3CXApiConnection.Endpoints.GroupListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+    $GroupFactory = [GroupFactory]::new($3CXApiConnection.Endpoints.GroupListEndpoint)
+    $Groups = $GroupFactory.makeGroup($GroupList)
     foreach($Group in $Groups){
-        # If Group in Config #$MappingCOnfig.Config.GroupMembership.Groups
+        if($true){
+            Write-Host 'yay'
+        }
+        # If Group in Config #$MappingConfig.Config.GroupMembership.Groups
             #$GroupMemberships - GetLiveGroupMemberships
             # Loop over CSV Data
             foreach($row in $GroupMembershipImportCSV.Config){

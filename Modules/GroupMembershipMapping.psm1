@@ -1,17 +1,24 @@
 Using module .\Config.psm1
 
-class Mapping
+class GroupMembershipMapping
 {
     # Hashtable mapping CSV Headers to an array of Objects containing API Names
-    [hashtable]$ParsedConfig = @{}
-    [PSCustomObject] $config
+    #[hashtable]$ParsedConfig = @{}
+    [PSCustomObject]$Mapping
 
-    Mapping([PSCustomObject] $config)
+    GroupMembershipMapping([PSCustomObject] $a)
     {
-        $this.config = $config
-        $this.ParseConfig($config)
+        #$this.ParseConfig($a)
+        $this.Mapping = $a;
     }
 
+    EvaluateConditions([array]$Conditions, $row){
+        foreach($Condition in $Conditions){
+            
+        }
+    }
+
+    <#
     [void] ParseConfig([PSCustomObject] $config)
     {
         $APIPaths = Get-Member -InputObject $config -MemberType Properties | Select-Object -ExpandProperty "Name"
@@ -20,7 +27,7 @@ class Mapping
             foreach($PathName in ($Path -split '\.')){
                 $PropertyPath = $PropertyPath + @{"Name"=$PathName}
             }
-            $CSVHeader = $config.$Path
+            $CSVHeader = $this.Config.$Path
             $this.ParsedConfig.$CSVHeader = $PropertyPath
         }
     }
@@ -34,7 +41,6 @@ class Mapping
     {
         return @($this.GetParsedConfig($CSVHeaderValue).values)
     }
-
     [array] GetConfigPathKeys()
     {
         return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Name')
@@ -73,4 +79,5 @@ class Mapping
             return ""
         }
     }
+    #>
 }

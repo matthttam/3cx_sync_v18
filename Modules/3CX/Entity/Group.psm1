@@ -1,9 +1,9 @@
 Using module .\Entity.psm1
-Using module ..\Endpoints\GroupList.psm1
+Using module ..\Endpoints\GroupListEndpoint.psm1
 
 Class Group : Entity
 {
-    [GroupList] $_endpoint
+    [GroupListEndpoint] $_endpoint
 
     Group($object, $endpoint) : base($object, $endpoint)
     {

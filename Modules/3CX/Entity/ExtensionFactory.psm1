@@ -1,12 +1,12 @@
-Using module ..\Endpoints\ExtensionList.psm1
+Using module ..\Endpoints\ExtensionListEndpoint.psm1
 Using module .\Extension.psm1
 
 Class ExtensionFactory
 {
     Static [Extension[]] $Extensions
-    [ExtensionList] $_endpoint
+    [ExtensionListEndpoint] $_endpoint
 
-    ExtensionFactory([ExtensionList] $endpoint)
+    ExtensionFactory([ExtensionListEndpoint] $endpoint)
     {
         $this._endpoint = $endpoint
     }
@@ -31,17 +31,18 @@ Class ExtensionFactory
     [Extension] makeExtension([string] $id)
     {
         $payload = @{"id" = $id}
-        $response = $this._endpoint.set($payload)
-        $responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
+        $responseObject = $this._endpoint.set($payload)
+        #$response = $this._endpoint.set($payload)
+        #$responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Extension]::new($responseObject, $this._endpoint)
     }
 
     # Create extension as new object
     [Extension] makeExtension()
     {
-        Write-Output 'here';
-        $response = $this._endpoint.New()
-        $responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
+        $responseObject = $this._endpoint.New()
+        #$response = $this._endpoint.New()
+        #$responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Extension]::new($responseObject, $this._endpoint)
     }
 }

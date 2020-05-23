@@ -1,12 +1,12 @@
-Using module ..\Endpoints\GroupList.psm1
+Using module ..\Endpoints\GroupListEndpoint.psm1
 Using module .\Group.psm1
 
 Class GroupFactory
 {
-    Static [Group[]] $Extensions
-    [GroupList] $_endpoint
+    Static [Group[]] $Groups
+    [GroupListEndpoint] $_endpoint
 
-    GroupFactory([GroupList] $endpoint)
+    GroupFactory([GroupListEndpoint] $endpoint)
     {
         $this._endpoint = $endpoint
     }
@@ -31,16 +31,18 @@ Class GroupFactory
     [Group] makeGroup([string] $id)
     {
         $payload = @{"id" = $id}
-        $response = $this._endpoint.set($payload)
-        $responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
+        $responseObject = $this._endpoint.set($payload)
+        #$response = $this._endpoint.set($payload)
+        #$responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Group]::new($responseObject, $this._endpoint)
     }
 
     # Create group as new object
     [Group] makeGroup()
     {
-        $response = $this._endpoint.New()
-        $responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
+        $responseObject = $this._endpoint.New()
+        #$response = $this._endpoint.New()
+        #$responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Group]::new($responseObject, $this._endpoint)
     }
 }

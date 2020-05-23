@@ -1,5 +1,6 @@
 Using module ..\Config.psm1
-Using module .\Endpoints\ExtensionList.psm1
+Using module .\Endpoints\ExtensionListEndpoint.psm1
+Using module .\Endpoints\GroupListEndpoint.psm1
 
 class APIConnection
 {
@@ -20,7 +21,8 @@ class APIConnection
             Password = $PlainPassword
         }) | ConvertTo-Json)
 
-        $this.Endpoints.ExtensionList = [ExtensionList]::New($this)
+        $this.Endpoints.ExtensionListEndpoint = [ExtensionListEndpoint]::New($this)
+        $this.Endpoints.GroupListEndpoint = [GroupListEndpoint]::New($this)
     }
 
     Login()
