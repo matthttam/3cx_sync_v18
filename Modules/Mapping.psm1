@@ -9,20 +9,6 @@ class Mapping
     Mapping([PSCustomObject] $config)
     {
         $this.config = $config
-        $this.ParseConfig($config)
-    }
-
-    [void] ParseConfig([PSCustomObject] $config)
-    {
-        $APIPaths = Get-Member -InputObject $config -MemberType Properties | Select-Object -ExpandProperty "Name"
-        foreach($Path in $APIPaths){
-            $PropertyPath = @()
-            foreach($PathName in ($Path -split '\.')){
-                $PropertyPath = $PropertyPath + @{"Name"=$PathName}
-            }
-            $CSVHeader = $config.$Path
-            $this.ParsedConfig.$CSVHeader = $PropertyPath
-        }
     }
     
     [PSCustomObject] GetParsedConfig($CSVHeaderValue)

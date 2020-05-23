@@ -10,8 +10,12 @@ Class Entity
     Entity($object, $endpoint)
     {
         $this.Id = $object.Id
-        $this.object = $object.ActiveObject
         $this._endpoint = $endpoint
+        if($object.ActiveObject){
+            $this.object = $object.ActiveObject
+        }else{
+            $this.object = $object
+        }
     }
 
     #$MappingParsedConfig

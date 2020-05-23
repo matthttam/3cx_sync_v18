@@ -1,5 +1,5 @@
 ﻿Using module .\Modules\Config.psm1
-Using module .\Modules\Mapping.psm1
+Using module .\Modules\ExtensionMapping.psm1
 Using module .\Modules\GroupMembershipMapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
@@ -73,8 +73,8 @@ try{
 if(-NOT $NoExtensions){
 
     # Extract New and Update extension mappings
-    $NewMapping = [Mapping]::New($MappingConfig.Config.Extension.New)
-    $UpdateMapping = [Mapping]::New($MappingConfig.Config.Extension.Update)
+    $NewMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.New)
+    $UpdateMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.Update)
     ## Import Extension CSV File
     try
     {
@@ -210,22 +210,36 @@ if(-NOT $NoGroupMemberships){
     $GroupFactory = [GroupFactory]::new($3CXApiConnection.Endpoints.GroupListEndpoint)
     $Groups = $GroupFactory.makeGroup($GroupList)
     foreach($Group in $Groups){
-        if($true){
-            Write-Host 'yay'
-        }
-        # If Group in Config #$MappingConfig.Config.GroupMembership.Groups
-            #$GroupMemberships - GetLiveGroupMemberships
+        $GroupMembershipMappingNames = $GroupMembershipMapping.GetConfigPathKeys()
+        if($Group.object.Name -in $GroupMembershipMappingNames){
+            $CurrentGroup = $GroupFactory.makeGroup($Group.object.Id)
+
+            #$PossibleValues = $CurrentGroup.GetPossibleValues()
+            #$Selected
+            
+            #$PossibleExtensions = $CurrentGroup.object.Members.possibleValues
+            #$SelectedExtensions = $CurrentGroup.object.Members.Selected
             # Loop over CSV Data
             foreach($row in $GroupMembershipImportCSV.Config){
-                
-                # Use Condition logic on row
-                # If TRUE
-                # REMOVE from array
-                    #If IN $GroupMemberships
-                    #ELSE
-                    # Add to GroupMemberships
+                if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.config.($Group.object.Name).Conditions, $row) ){
+                    # IF Not Found in Possible Extensions, Continue
+                    $PossibleValue = $CurrentGroup.GetPossibleValueByNumber($row.Number)
+                    if(-NOT $PossibleValue){
+                        Write-Warning ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
+                        Continue
+                    }else{
+                        # IF IN SelectedExtensions
+                        # ELSE Add to Group
+                        #Remove from SelectedExtensions
+                    }
+
+                    #Write-Host 'Will Add' $row.Number 'to' $Group.object.Name
+                }
+                    
             }
-            # Remove leftovers in array from groups
+        }
+        # Remove leftovers in array from groups
     }
+    Write-Host 'here'
 }
 Write-PSFMessage -Level Output -Message 'Sync Ended'

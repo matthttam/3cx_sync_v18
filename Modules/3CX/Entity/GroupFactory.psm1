@@ -32,8 +32,6 @@ Class GroupFactory
     {
         $payload = @{"id" = $id}
         $responseObject = $this._endpoint.set($payload)
-        #$response = $this._endpoint.set($payload)
-        #$responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Group]::new($responseObject, $this._endpoint)
     }
 
@@ -41,8 +39,6 @@ Class GroupFactory
     [Group] makeGroup()
     {
         $responseObject = $this._endpoint.New()
-        #$response = $this._endpoint.New()
-        #$responseObject = $response.content | ConvertFrom-Json -ErrorAction Stop
         return [Group]::new($responseObject, $this._endpoint)
     }
 }

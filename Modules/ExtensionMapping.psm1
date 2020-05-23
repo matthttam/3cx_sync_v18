@@ -1,14 +1,13 @@
-Using module .\Config.psm1
+Using module .\Mapping.psm1
 
-class Mapping
+
+class ExtensionMapping : Mapping
 {
-    # Hashtable mapping CSV Headers to an array of Objects containing API Names
+    # Hashtable ExtensionMapping CSV Headers to an array of Objects containing API Names
     [hashtable]$ParsedConfig = @{}
-    [PSCustomObject] $config
 
-    Mapping([PSCustomObject] $config)
+    ExtensionMapping([PSCustomObject] $config) : base($config)
     {
-        $this.config = $config
         $this.ParseConfig($config)
     }
 
