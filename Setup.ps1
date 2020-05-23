@@ -64,7 +64,6 @@ if($Update){
         Username = ""
         Password = @{}
         BaseUrl = ""
-        ImportFilename = ""
     }
 }
 
@@ -84,9 +83,6 @@ if($password.Length -ne 0){
 }
 if($url){
     $config.BaseUrl = $url.Trim('/')
-}
-if($importFilename){
-    $config.ImportFilename = $importFilename
 }
 
 # Save config.json with encrypted password and other config information

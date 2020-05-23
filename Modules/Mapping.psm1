@@ -1,18 +1,18 @@
 Using module .\Config.psm1
 
-class Mapping : Config
+class Mapping
 {
     # Hashtable mapping CSV Headers to an array of Objects containing API Names
     [hashtable]$ParsedConfig = @{}
 
-    Mapping([string]$a) : base($a)
+    Mapping([PSCustomObject] $a)
     {
-        $this.ParseConfig($this.Config)
+        $this.ParseConfig($a)
     }
 
     [void] ParseConfig([PSCustomObject] $config)
     {
-        $APIPaths = Get-Member -InputObject $this.config -MemberType Properties | Select-Object -ExpandProperty "Name"
+        $APIPaths = Get-Member -InputObject $config -MemberType Properties | Select-Object -ExpandProperty "Name"
         foreach($Path in $APIPaths){
             $PropertyPath = @()
             foreach($PathName in ($Path -split '\.')){
