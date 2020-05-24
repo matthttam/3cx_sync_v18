@@ -215,7 +215,8 @@ if(-NOT $NoGroupMemberships){
             $CurrentGroup = $GroupFactory.makeGroup($Group.object.Id)
 
             [System.Collections.ArrayList] $RemainingSelectedExtensions = $CurrentGroup.GetSelected() #Used to determine what extensions will be removed
-            [System.Collections.ArrayList] $SelectedExtensions = @() # Used to Update Group
+            [System.Collections.ArrayList] $SelectedExtensionIds = @() # Used to Update Group
+            [System.Collections.ArrayList] $SelectedExtensions = @() # Used to log what was added
 
             # Loop over CSV Data
             foreach($row in $GroupMembershipImportCSV.Config){
@@ -227,35 +228,50 @@ if(-NOT $NoGroupMemberships){
                         Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
                         Continue
                     }else{
-                            $SelectedExtensions += $FoundValue.Id
+                            $SelectedExtensionIds += $FoundValue.Id
+                            $SelectedExtensions += $FoundValue.Number._value
                             $RemainingSelectedExtensions.Remove($FoundValue.Id)
                     }
                 }
             }
-            try{
-                # If the determined selected extensions differs from the currently selected extensions we need to update
-                if((Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensions -Passthru).count -ne 0){
-                    $message = ("Staged update to group '{0}' to add extension(s) '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '"))
+            $SelectedExtensionIds =  $SelectedExtensionIds | Select-Object -Unique
+            $SelectedExtensions =  $SelectedExtensions | Select-Object -Unique
+            # If the determined selected extensions differs from the currently selected extensions we need to update
+            #if((Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensionIds -Passthru).count -ne 0){
+            #$Comparison = @(Compare-Object ($CurrentGroup.GetSelected()) $SelectedExtensionIds -SyncWindow 0).Length -ne 0
+            #$Comparison = Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensionIds
+            $Comparison = Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensionIds -Passthru
+            if($Comparison.length -ne 0){
+                try{
+                    $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '"))
                     if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
                     {
-                        $payload = $CurrentGroup.GetUpdatePayload(@(@{"Name" = "Members"}), $SelectedExtensions)
+                        $payload = $CurrentGroup.GetUpdatePayload(@(@{"Name" = "Members"}), $SelectedExtensionIds)
                         $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
                         Write-PSFMessage -Level Output -Message ($message)
                     }
+                }catch{
+                    Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($Group.object.Name))
+                    continue;
                 }
 
-                $message = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
-                $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($RemainingSelectedExtensions -join "', '") )
-                if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
-                {
-                    $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
-                    Write-PSFMessage -Level Output -Message ($message)
+                try{
+                    $message = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
+                    
+                    if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
+                    {
+                        $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
+                        Write-PSFMessage -Level Output -Message ($message)
+                    }
+                    if($RemainingSelectedExtensions.count -gt 0){
+                        $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($RemainingSelectedExtensions -join "', '") )
+                        if($PSCmdlet.ShouldProcess($Group.object.Name, $RemovedMessage)){
+                            Write-PSFMessage -Level Output -Message ($RemovedMessage)
+                        }
+                    }
+                }catch{
+                    Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $Group.object.Name )
                 }
-                if($PSCmdlet.ShouldProcess($Group.object.Name, $RemovedMessage)){
-                    Write-PSFMessage -Level Output -Message ($RemovedMessage)
-                }
-            }catch{
-                Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'. Unable to add extension '{1}'" -f $row.$CSVNumberHeader)
             }
         }
     }
