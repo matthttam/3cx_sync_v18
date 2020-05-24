@@ -30,6 +30,10 @@ Class Group : Entity
 
     [PSObject] GetPossibleValueByNumber($Number){
         return $this.PossibleValueLookup[$Number]
-        #return $this.GetPossibleValues() | Where-Object -FilterScript {$_.Number._value -eq $Number}
+    }
+
+    [PSObject] GetUpdatePayload($GroupId, [Array] $Selected)
+    {
+        return @{}
     }
 }

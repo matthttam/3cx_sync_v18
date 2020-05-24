@@ -13,11 +13,9 @@ Class GroupListEndpoint : Endpoint
         return $this.APIConnection.post('edit/update', @{'Body' = ($payload | ConvertTo-Json -Depth 10)} )
     }
 
-    [PSObject] Save($extension)
+    [PSObject] Save($group)
     {
-        return $this.APIConnection.post('edit/save', @{'Body' = ($extension.Id | ConvertTo-Json )})
+        return $this.APIConnection.post('edit/save', @{'Body' = ($group.Id | ConvertTo-Json )})
     }
 
-    
-    
 }

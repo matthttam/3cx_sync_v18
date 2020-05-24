@@ -214,32 +214,50 @@ if(-NOT $NoGroupMemberships){
         if($Group.object.Name -in $GroupMembershipMappingNames){
             $CurrentGroup = $GroupFactory.makeGroup($Group.object.Id)
 
-            #$PossibleValues = $CurrentGroup.GetPossibleValues()
-            #$Selected
-            
-            #$PossibleExtensions = $CurrentGroup.object.Members.possibleValues
-            #$SelectedExtensions = $CurrentGroup.object.Members.Selected
+            [System.Collections.ArrayList] $RemainingSelectedExtensions = $CurrentGroup.GetSelected() #Used to determine what extensions will be removed
+            [System.Collections.ArrayList] $SelectedExtensions = @() # Used to Update Group
+
             # Loop over CSV Data
             foreach($row in $GroupMembershipImportCSV.Config){
+                # Determine Proper Extensions in Group
                 if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.config.($Group.object.Name).Conditions, $row) ){
                     # IF Not Found in Possible Extensions, Continue
-                    $PossibleValue = $CurrentGroup.GetPossibleValueByNumber($row.Number)
-                    if(-NOT $PossibleValue){
+                    $FoundValue = $CurrentGroup.GetPossibleValueByNumber($row.Number)
+                    if(-not $FoundValue){
                         Write-Warning ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
                         Continue
                     }else{
-                        # IF IN SelectedExtensions
-                        # ELSE Add to Group
-                        #Remove from SelectedExtensions
+                            $SelectedExtensions += $FoundValue.Id
+                            $RemainingSelectedExtensions.Remove($FoundValue.Id)
                     }
-
-                    #Write-Host 'Will Add' $row.Number 'to' $Group.object.Name
                 }
-                    
+            }
+            try{
+                # If the determined selected extensions differs from the currently selected extensions we need to update
+                if((Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensions -Passthru).count -ne 0){
+                    $message = ("Staged update to group '{0}' to add extension(s) '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '"))
+                    if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
+                    {
+                        $payload = $CurrentGroup.GetUpdatePayload(@(@{"Name" = "Members"}), $SelectedExtensions)
+                        $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
+                        Write-PSFMessage -Level Output -Message ($message)
+                    }
+                }
+
+                $message = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
+                $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
+                if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
+                {
+                    $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
+                    Write-PSFMessage -Level Output -Message ($message)
+                }
+                if($PSCmdlet.ShouldProcess($Group.object.Name, $RemovedMessage)){
+                    Write-PSFMessage -Level Output -Message ($RemovedMessage)
+                }
+            }catch{
+                Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'. Unable to add extension '{1}'" -f $row.$CSVNumberHeader)
             }
         }
-        # Remove leftovers in array from groups
     }
-    Write-Host 'here'
 }
 Write-PSFMessage -Level Output -Message 'Sync Ended'
