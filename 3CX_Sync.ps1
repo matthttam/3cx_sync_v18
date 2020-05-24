@@ -224,7 +224,7 @@ if(-NOT $NoGroupMemberships){
                     # IF Not Found in Possible Extensions, Continue
                     $FoundValue = $CurrentGroup.GetPossibleValueByNumber($row.Number)
                     if(-not $FoundValue){
-                        Write-Warning ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
+                        Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
                         Continue
                     }else{
                             $SelectedExtensions += $FoundValue.Id
