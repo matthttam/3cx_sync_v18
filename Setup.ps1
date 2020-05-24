@@ -64,7 +64,6 @@ if($Update){
         Username = ""
         Password = @{}
         BaseUrl = ""
-        ImportFilename = ""
     }
 }
 
@@ -72,7 +71,6 @@ if($username){
     $config.Username = $username
 }
 if($password.Length -ne 0){
-    #$config.Password += @{([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) = (ConvertFrom-SecureString -SecureString $password)}
     $CurrentUser =  [Environment]::UserDomainNAME + '\' + [Environment]::UserName
 
     # If user already has stored password
@@ -85,9 +83,6 @@ if($password.Length -ne 0){
 }
 if($url){
     $config.BaseUrl = $url.Trim('/')
-}
-if($importFilename){
-    $config.ImportFilename = $importFilename
 }
 
 # Save config.json with encrypted password and other config information
