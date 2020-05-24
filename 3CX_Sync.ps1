@@ -245,7 +245,7 @@ if(-NOT $NoGroupMemberships){
                 }
 
                 $message = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
-                $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
+                $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($RemainingSelectedExtensions -join "', '") )
                 if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
                 {
                     $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
