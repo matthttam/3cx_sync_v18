@@ -228,49 +228,63 @@ if(-NOT $NoGroupMemberships){
                         Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
                         Continue
                     }else{
-                            $SelectedExtensionIds += $FoundValue.Id
-                            $SelectedExtensions += $FoundValue.Number._value
-                            $RemainingSelectedExtensions.Remove($FoundValue.Id)
+                            if(-not ($SelectedExtensions -contains $FoundValue)){
+                                $SelectedExtensions += $FoundValue
+                            }
+                            #$SelectedExtensionIds += $FoundValue.Id
+                            #$SelectedExtensions += $FoundValue.Number._value
+                            #$RemainingSelectedExtensions.Remove($FoundValue.Id)
                     }
                 }
             }
-            $SelectedExtensionIds =  $SelectedExtensionIds | Select-Object -Unique
-            $SelectedExtensions =  $SelectedExtensions | Select-Object -Unique
+            #$SelectedExtensionIds =  $SelectedExtensionIds | Select-Object -Unique
+            #$SelectedExtensions =  $SelectedExtensions | Select-Object -Unique
             # If the determined selected extensions differs from the currently selected extensions we need to update
             #if((Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensionIds -Passthru).count -ne 0){
             #$Comparison = @(Compare-Object ($CurrentGroup.GetSelected()) $SelectedExtensionIds -SyncWindow 0).Length -ne 0
             #$Comparison = Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensionIds
-            $Comparison = Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject $SelectedExtensionIds -Passthru
+            #$Comparison = Compare-Object -ReferenceObject $CurrentGroup.GetSelected() -DifferenceObject ($SelectedExtensions | Select-Object -Property Id) -Passthru
+            $Comparison = Compare-Object -ReferenceObject ($CurrentGroup.GetSelected()) -DifferenceObject ($SelectedExtensions | Select-Object -ExpandProperty Id)
             if($Comparison.length -ne 0){
-                try{
-                    $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '"))
-                    if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
-                    {
-                        $payload = $CurrentGroup.GetUpdatePayload(@(@{"Name" = "Members"}), $SelectedExtensionIds)
-                        $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
-                        Write-PSFMessage -Level Output -Message ($message)
+                
+                $ExtensionIdsToAdd = $Comparison | Where-Object -Property SideIndicator -Eq '=>' | Select-Object -ExpandProperty InputObject
+                $ExtensionIdsToRemove = $Comparison | Where-Object -Property SideIndicator -Eq '<=' | Select-Object -ExpandProperty InputObject
+                $MessageInfoTemplate = @{label="Info";expression={$_.Number._value + ' - ' + $_.FirstName._value + ' ' + $_.LastName._value}}
+
+                if($ExtensionIdsToAdd.count -gt 0)
+                {
+                    $ExtensionToAddInfo = $SelectedExtensions | Where-Object -FilterScript {$_.Id -in $ExtensionIdsToAdd} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
+                    $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $Group.object.Name, ($ExtensionToAddInfo -join "', '"))
+                    try{
+                        if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
+                        {
+                            $payload = $CurrentGroup.GetUpdatePayload(@(@{"Name" = "Members"}), $ExtensionIdsToAdd)
+                            $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
+                            Write-PSFMessage -Level Output -Message ($message)
+                        }
+                    }catch{
+                        Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($Group.object.Name))
+                        continue;
                     }
-                }catch{
-                    Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($Group.object.Name))
-                    continue;
+
+                    try{
+                        $AddMessage = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($ExtensionToAddInfo -join "', '") )
+                        if ($PSCmdlet.ShouldProcess($Group.object.Name, $AddMessage))
+                        {
+                            $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
+                            Write-PSFMessage -Level Output -Message ($AddMessage)
+                        }
+                    }catch{
+                        Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $Group.object.Name )
+                    }
                 }
 
-                try{
-                    $message = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($SelectedExtensions -join "', '") )
-                    
-                    if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
-                    {
-                        $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
-                        Write-PSFMessage -Level Output -Message ($message)
+                if($ExtensionIdsToRemove.count -gt 0){
+                    $ExtensionToRemoveInfo = $CurrentGroup.Object.Members.possibleValues | Where-Object -FilterScript {$_.Id -in $ExtensionIdsToRemove} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
+                    $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($ExtensionToRemoveInfo -join "', '") )
+                    if($PSCmdlet.ShouldProcess($Group.object.Name, $RemovedMessage)){
+                        Write-PSFMessage -Level Output -Message ($RemovedMessage)
                     }
-                    if($RemainingSelectedExtensions.count -gt 0){
-                        $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($RemainingSelectedExtensions -join "', '") )
-                        if($PSCmdlet.ShouldProcess($Group.object.Name, $RemovedMessage)){
-                            Write-PSFMessage -Level Output -Message ($RemovedMessage)
-                        }
-                    }
-                }catch{
-                    Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $Group.object.Name )
                 }
             }
         }

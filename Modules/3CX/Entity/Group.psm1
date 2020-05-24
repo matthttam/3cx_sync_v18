@@ -28,7 +28,7 @@ Class Group : Entity
         return $this.object.Members.selected
     }
 
-    [PSObject] GetPossibleValueByNumber($Number){
+    [PSObject] GetPossibleValueByNumber([string]$Number){
         return $this.PossibleValueLookup[$Number]
     }
 
