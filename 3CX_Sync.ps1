@@ -256,16 +256,17 @@ if(-NOT $NoGroupMemberships){
                 }
             }
 
-            $Comparison = Compare-Object -ReferenceObject ($CurrentGroup.GetSelected()) -DifferenceObject ($SelectedExtensions | Select-Object -ExpandProperty Id)
-            if($Comparison.length -ne 0){
+            $Comparison = Compare-Object -ReferenceObject ($CurrentGroup.GetSelected()) -DifferenceObject ($SelectedExtensions | Select-Object -ExpandProperty Id) -IncludeEqual
+            if(($Comparison | Where-Object -Property SideIndicator -ne '==').count  -ne 0){
                 
-                $ExtensionIdsToAdd = $Comparison | Where-Object -Property SideIndicator -Eq '=>' | Select-Object -ExpandProperty InputObject
+                $ExtensionIdsToAdd = $Comparison | Where-Object -Property SideIndicator -ne '<=' | Select-Object -ExpandProperty InputObject
+                $NewExtensionIdsToAdd = $Comparison | Where-Object -Property SideIndicator -eq '=>' | Select-Object -ExpandProperty InputObject
                 $ExtensionIdsToRemove = $Comparison | Where-Object -Property SideIndicator -Eq '<=' | Select-Object -ExpandProperty InputObject
                 $MessageInfoTemplate = @{label="Info";expression={$_.Number._value + ' - ' + $_.FirstName._value + ' ' + $_.LastName._value}}
 
                 if($ExtensionIdsToAdd.count -gt 0)
                 {
-                    $ExtensionToAddInfo = $SelectedExtensions | Where-Object -FilterScript {$_.Id -in $ExtensionIdsToAdd} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
+                    $ExtensionToAddInfo = $SelectedExtensions | Where-Object -FilterScript {$_.Id -in $NewExtensionIdsToAdd} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
                     $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $Group.object.Name, ($ExtensionToAddInfo -join "', '"))
                     try{
                         if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))

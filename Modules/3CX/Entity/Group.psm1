@@ -31,9 +31,4 @@ Class Group : Entity
     [PSObject] GetPossibleValueByNumber([string]$Number){
         return $this.PossibleValueLookup[$Number]
     }
-
-    [PSObject] GetUpdatePayload($GroupId, [Array] $Selected)
-    {
-        return @{}
-    }
 }
