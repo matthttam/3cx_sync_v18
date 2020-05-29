@@ -266,7 +266,7 @@ if(-NOT $NoGroupMemberships){
 
                 if($ExtensionIdsToAdd.count -gt 0)
                 {
-                    $ExtensionToAddInfo = $SelectedExtensions | Where-Object -FilterScript {$_.Id -in $NewExtensionIdsToAdd} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
+                    $ExtensionToAddInfo = $CurrentGroup.Object.Members.possibleValues | Where-Object -FilterScript {$_.Id -in $NewExtensionIdsToAdd} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
                     $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $Group.object.Name, ($ExtensionToAddInfo -join "', '"))
                     try{
                         if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
