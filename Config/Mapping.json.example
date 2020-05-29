@@ -1,0 +1,167 @@
+{
+    "Extension": 
+    {
+        "Path": "Import Files/3CX_Extensions.csv",
+        "New": 
+				{
+						"Number":  "Number",
+						"FirstName":  "FirstName",
+						"LastName":  "LastName",
+						"Email":  "Email",
+						"VMPin":  "VMPIN",
+						"VMEmailOptions":  "VMEmailOptions",
+						"OutboundCallerId":  "OutboundCallerId",
+						"SendEmailMissedCalls":  "SendEmailMissedCalls",
+						"Disabled":  "Disabled",
+						"MyPhoneStartUpScreen":  "MyPhoneStartUpScreen",
+						"AccessPassword":  "AccessPassword",
+						"AllowToUseHotdesking":  "AllowToUseHotdesking",
+						"MyPhoneUseIn3cxPhoneMode":  "MyPhoneUseIn3cxPhoneMode"
+				},
+        "Update": 
+				{
+						"FirstName":  "FirstName",
+						"LastName":  "LastName",
+						"Email":  "Email",
+						"SendEmailMissedCalls":  "SendEmailMissedCalls",
+						"Disabled":  "Disabled",
+						"MyPhoneStartUpScreen":  "MyPhoneStartUpScreen",
+						"AllowToUseHotdesking":  "AllowToUseHotdesking"
+				}
+    },
+    "GroupMembership": 
+    {
+        "Path": "Import Files/3CX_Groups.csv",
+        "Groups":
+        {
+            "Sutton Elementary School":
+            {
+                "Conditions": 
+                [
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "140"
+                    }
+                ]
+            },
+            "Owensboro Middle School":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "108"
+                    }
+                ]
+            },
+            "Owensboro Innovation Middle School": 
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "102"
+                    }
+                ]
+            },
+            "Owensboro Innovation Academy":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "116"
+                    }
+                ]
+            },
+            "Newton Parrish Elementary School": 
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "100"
+                    }
+                ]
+            },
+            "Hager Preschool": 
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "180"
+                    }
+                ]
+            },
+            "Foust Elementary School": 
+            {
+                "Name": "Foust Elementary School",
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "060"
+                    }
+                ]
+            },
+            "Estes Elementary School":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "030"
+                    }
+                ]
+            },
+            "Emerson Academy":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "015"
+                    }
+                ]
+            },
+            "Cravens Elementary School":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "010"
+                    }
+                ]
+            },
+            "Substitutes":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "999"
+                    }
+                ]
+            },
+            "Central Office":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "001"
+                    }
+                ]
+            },
+            "Transportation":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "901"
+                    }
+                ]
+            },
+            "Maintenance":
+            {
+                "Conditions":[
+                    {
+                        "Field": "SchoolNumber",
+                        "Value": "920"
+                    }
+                ]
+            }
+        }
+    }
+}
