@@ -45,7 +45,7 @@ class APIConnection
     [PSObject] get([string]$Path)
     {
         $parameters = $this.ConnectionSettings
-        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 2)
+        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters -UseBasicParsing )
     }
 
     [PSObject] post([string]$Path)
@@ -55,7 +55,7 @@ class APIConnection
     [PSObject] post([string]$Path, [hashtable] $Options)
     {
         $parameters = $this.ConnectionSettings
-        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 2)
+        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing )
     }
 
 }
