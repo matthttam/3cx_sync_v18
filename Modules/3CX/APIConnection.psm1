@@ -1,5 +1,6 @@
 Using module ..\Config.psm1
-Using module .\Endpoints\ExtensionList.psm1
+Using module .\Endpoints\ExtensionListEndpoint.psm1
+Using module .\Endpoints\GroupListEndpoint.psm1
 
 class APIConnection
 {
@@ -20,7 +21,8 @@ class APIConnection
             Password = $PlainPassword
         }) | ConvertTo-Json)
 
-        $this.Endpoints.ExtensionList = [ExtensionList]::New($this)
+        $this.Endpoints.ExtensionListEndpoint = [ExtensionListEndpoint]::New($this)
+        $this.Endpoints.GroupListEndpoint = [GroupListEndpoint]::New($this)
     }
 
     Login()
@@ -43,7 +45,7 @@ class APIConnection
     [PSObject] get([string]$Path)
     {
         $parameters = $this.ConnectionSettings
-        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters -UseBasicParsing)
+        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Get @parameters -UseBasicParsing )
     }
 
     [PSObject] post([string]$Path)
@@ -53,7 +55,7 @@ class APIConnection
     [PSObject] post([string]$Path, [hashtable] $Options)
     {
         $parameters = $this.ConnectionSettings
-        return Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing
+        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing )
     }
 
 }
