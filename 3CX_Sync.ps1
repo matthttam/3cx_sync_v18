@@ -10,7 +10,10 @@ Param(
     [Switch] $NoExtensions,
     [Switch] $NoGroupMemberships,
     [Switch] $NoNewExtensions,
-    [Switch] $NoUpdateExtensions
+    [Switch] $NoUpdateExtensions,
+    [Switch] $NoHotdesking,
+    [Switch] $NoNewHotdesking,
+    [Switch] $NoUpdateHotdesking
 )
 
 # Set security protocols that are supported
