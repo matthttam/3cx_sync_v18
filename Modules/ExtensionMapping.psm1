@@ -3,7 +3,7 @@ Using module .\Mapping.psm1
 
 class ExtensionMapping : Mapping
 {
-    # Hashtable ExtensionMapping CSV Headers to an array of Objects containing API Names
+    # Hashtable ExtensionMapping CSV Headers to  #an array of Objects containing API Names
     [hashtable]$ParsedConfig = @{}
 
     ExtensionMapping([PSCustomObject] $config) : base($config)
@@ -44,32 +44,4 @@ class ExtensionMapping : Mapping
         return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Value')
     }
 
-    [PSObject] ConvertToType( $Value, $attributeInfo )
-    {
-        if($attributeInfo.Type-eq 'String'){
-            return $Value
-        }elseif($attributeInfo.Type -eq 'Enum'){
-            return $attributeInfo.possibleValues[$Value]
-        }elseif($attributeInfo.Type -eq 'SelectedItem'){
-            return $attributeInfo.possibleValues | Where-Object Id -eq $Value
-        }elseif($attributeInfo.Type -eq 'Boolean'){
-            if($Value -eq '1' -or $Value -eq 'true'){
-                return $true
-            }else{
-                return $false
-            }
-        }elseif($attributeInfo.Type -eq 'Collection'){
-            throw 'Unsupported api mapping type'
-        }elseif($attributeInfo.Type -eq 'File'){
-            throw 'Unsupported api mapping type'
-        }elseif($attributeInfo.Type -eq 'Item'){
-            throw 'Unsupported api mapping type'
-        }elseif($attributeInfo.Type -eq 'ItemSet'){
-            throw 'Unsupported api mapping'
-        }elseif($attributeInfo.Type -eq 'TimeRanges'){
-            throw 'Unsupported api mapping type'
-        }else{
-            return ""
-        }
-    }
 }
