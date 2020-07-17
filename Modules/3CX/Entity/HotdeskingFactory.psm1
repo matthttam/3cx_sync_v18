@@ -22,7 +22,7 @@ Class HotdeskingFactory
         $return = @()
         foreach($object in $objects)
         {
-            $return += $this.makeExtension($object)
+            $return += $this.makeHotdesking($object)
         }
         return $return
     }
@@ -36,9 +36,13 @@ Class HotdeskingFactory
     }
 
     # Create Hotdesking as new object
-    [Hotdesking] makeHotdesking()
+    [Hotdesking] makeHotdesking( [Hashtable] $HotdeskingInfo)
     {
-        $responseObject = $this._endpoint.New()
+        return $this.makeHotdesking($HotdeskingInfo.MacAddress, $HotdeskingInfo.Model)
+    }
+    [Hotdesking] makeHotdesking( [String] $mac, [String] $model)
+    {
+        $responseObject = $this._endpoint.New($mac, $model)
         return [Hotdesking]::new($responseObject, $this._endpoint)
     }
 }
