@@ -312,11 +312,11 @@ if(-NOT $NoGroupMemberships -and -NOT $NoGroups){
 }
 
 if( -NOT $NoHotdesking){
-    # Extract New and Update extension mappings
+    # Extract New and Update Hotdesking Mappings
     $NewMapping = [HotdeskingMapping]::New($MappingConfig.Config.Hotdesking.New)
     $UpdateMapping = [HotdeskingMapping]::New($MappingConfig.Config.Hotdesking.Update)
 
-    ## Import GroupMembership CSV File
+    ## Import Hotdesking CSV File
     try
     {
         $HotdeskingImportCSV = [Config]::New($MappingConfig.Config.Hotdesking.Path, [Config]::CSV)
@@ -330,22 +330,24 @@ if( -NOT $NoHotdesking){
         Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
-       # Get A List of Hotdeskings
+    # Save HotdeskingListEndpoint to a variable
+    $HotdeskingEndpoint = $3CXApiConnection.Endpoints.HotdeskingListEndpoint;
+    
+    # Get A List of Hotdeskings from 3CX
     try{
-        $HotdeskingList = $3CXApiConnection.Endpoints.HotdeskingListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $HotdeskingList = $HotdeskingEndpoint.Get() | Select-Object -ExpandProperty 'list'
     }catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
-    $HotdeskingEndpoint = $3CXApiConnection.Endpoints.HotdeskingListEndpoint;
-    $HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
+    # Create Hotdesking Factory
+    #$HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
     
-    $HotdeskingMacs = $HotdeskingList | Select-Object -ExpandProperty id
-    $Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
-    $CSVMacHeader = $NewMapping.Config.Mac
-    $HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
-    #$UpdateMappingCSVKeys = $UpdateMapping.GetConfigCSVKeys()
-    $NewMappingCSVKeys = $NewMapping.GetConfigCSVKeys()
+    # Marshal the Hotdesking List into Hotdesking objects.
+    #$Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
+
+    # Get all Macs from the listed hotdeskings
+    #$HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
 
     $HotdeskingMacs = $HotdeskingList | Select-Object -ExpandProperty ($NewMapping.GetCSVHeader('MacAddress'))
     foreach( $row in $HotdeskingImportCSV.Config )
