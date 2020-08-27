@@ -3,9 +3,8 @@ Using module ..\Endpoints\Endpoint.psm1
 Class Entity
 {
     [Endpoint] $_endpoint
-    [int64] $Id
-    $object = @{}
-    
+    [String] $Id
+    $object
 
     Entity($object, $endpoint)
     {
@@ -14,7 +13,7 @@ Class Entity
         if($object.ActiveObject){
             $this.object = $object.ActiveObject
         }else{
-            $this.object = $object
+            $this.object = @{}
         }
     }
 
@@ -22,7 +21,6 @@ Class Entity
     # Return appropriate selected values based on type
     [PSObject] GetObjectValue( $attributeInfo )
     {
-        #$attributeInfo = $this.GetObjectAttributeInfo($MappingParsedConfig.Values)
         if($attributeInfo.Type -in ('Enum', 'File', 'ItemSet')){
             return $attributeInfo.selected
         }else{
@@ -33,18 +31,23 @@ Class Entity
     # Return attributeInfo of a path from the object
     [PSObject] GetObjectAttributeInfo($key)
     {
+        return $this.GetObjectAttributeInfo($key, $this.object)
+    }
+    [PSObject] GetObjectAttributeInfo($key, $object)
+    {
         if( $key -is [string] ){
-            $p1,$p2 = $key.Split(".")
+            #$p1,$p2 = $key.Split(".")
+            $p1, $p2 = $key.Split(".", 2)
         }elseif( $key -is [array] ){
             $p1, $p2 = $key
         }else{
             return $false
         }
-        if($p2) {
-            return $this.GetObjectAttributeInfo($this.object.$p1, $p2)
+        if($object.$p1.type -eq 'Collection') {
+                return $this.GetObjectAttributeInfo($p2, $object.$p1._value)
         }
         else {
-            return $this.object.$p1
+            return $object.$p1
         }
     }
 

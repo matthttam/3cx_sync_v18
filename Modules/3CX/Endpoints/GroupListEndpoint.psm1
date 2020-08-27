@@ -8,14 +8,4 @@ Class GroupListEndpoint : Endpoint
         $this.SetEndpointPath('GroupList')
     }
 
-    [PSObject] Update($payload)
-    {
-        return $this.APIConnection.post('edit/update', @{'Body' = ($payload | ConvertTo-Json -Depth 10)} )
-    }
-
-    [PSObject] Save($group)
-    {
-        return $this.APIConnection.post('edit/save', @{'Body' = ($group.Id | ConvertTo-Json )})
-    }
-
 }

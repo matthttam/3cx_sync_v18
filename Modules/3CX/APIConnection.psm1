@@ -1,6 +1,7 @@
 Using module ..\Config.psm1
 Using module .\Endpoints\ExtensionListEndpoint.psm1
 Using module .\Endpoints\GroupListEndpoint.psm1
+Using module .\Endpoints\HotdeskingListEndpoint.psm1
 
 class APIConnection
 {
@@ -23,6 +24,7 @@ class APIConnection
 
         $this.Endpoints.ExtensionListEndpoint = [ExtensionListEndpoint]::New($this)
         $this.Endpoints.GroupListEndpoint = [GroupListEndpoint]::New($this)
+        $this.Endpoints.HotdeskingListEndpoint = [HotdeskingListEndpoint]::New($this)
     }
 
     Login()

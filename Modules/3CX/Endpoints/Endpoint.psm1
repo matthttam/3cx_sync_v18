@@ -31,7 +31,10 @@ Class Endpoint
     }
 
 
-    [PSObject] New() { return ($this.New(@{})) }
+    [PSObject] New() 
+    { 
+        return ($this.New(@{})) 
+    }
     [PSObject] New($options)
     {
         $response =  $this.APIConnection.post($this.GetEndpointPath('new'))
@@ -50,5 +53,62 @@ Class Endpoint
     {
         $response = $this.APIConnection.get($this.GetEndpointPath())
         return $this.FormatResponse( $response, $options)
+    }
+
+    [PSObject] Update($payload)
+    {
+        return $this.APIConnection.post('edit/update', @{'Body' = ($payload | ConvertTo-Json -Depth 10)} )
+    }
+
+    [PSObject] Save($entity)
+    {
+        return $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
+    }
+
+    # Functions used to convert CSV information for updates
+    [hashtable] GetUpdatePayload( $PropertyPath, $CSVDataValue ){
+        $payload = @{
+            "Path" = @{
+                "ObjectId" = $this.Id
+                "PropertyPath" = $PropertyPath #$Mapping.ParsedConfig.$CSVHeader
+            }
+            "PropertyValue" = $CSVDataValue
+        }
+        return $payload
+    }
+
+    [PSObject] ConvertToType( $entity, $path, $Value )
+    {
+        $attributeInfo = $entity.GetObjectAttributeInfo($path)
+        if($attributeInfo.Type-eq 'String'){
+            return $Value
+        }elseif($attributeInfo.Type -eq 'Enum'){
+            if($Value -in $attributeInfo.possibleValues){
+                return $Value
+            }else{
+                return $null #maybe throw error?
+            }
+            #return $attributeInfo.possibleValues[$Value]
+        }elseif($attributeInfo.Type -eq 'SelectedItem'){
+            return $attributeInfo.possibleValues | Where-Object Id -eq $Value
+        }elseif($attributeInfo.Type -eq 'Boolean'){
+            if($Value -eq '1' -or $Value -eq 'true'){
+                return $true
+            }else{
+                return $false
+            }
+        }elseif($attributeInfo.Type -eq 'Collection'){
+            throw 'Unsupported api mapping type'
+        }elseif($attributeInfo.Type -eq 'File'){
+            throw 'Unsupported api mapping type'
+        }elseif($attributeInfo.Type -eq 'Item'){
+            throw 'Unsupported api mapping type'
+        }elseif($attributeInfo.Type -eq 'ItemSet'){
+            throw 'Unsupported api mapping'
+        }elseif($attributeInfo.Type -eq 'TimeRanges'){
+            throw 'Unsupported api mapping type'
+        }else{
+            return ""
+        }
     }
 }

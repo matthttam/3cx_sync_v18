@@ -11,22 +11,26 @@ class Mapping
         $this.config = $config
     }
     
-    [PSCustomObject] GetParsedConfig($CSVHeaderValue)
+    #??? I'm so confused by this function actually
+    [PSCustomObject] GetParsedConfig($CSVHeaderValue) #Deprecated
     {
         return $this.ParsedConfig.$CSVHeaderValue
     }
 
-    [array] GetParsedConfigValues($CSVHeaderValue)
+    [array] GetParsedConfigValues($CSVHeaderValue) #Deprecated
     {
         return @($this.GetParsedConfig($CSVHeaderValue).values)
     }
 
-    [array] GetConfigPathKeys()
+    [array] GetConfigPathKeys() #Deprecated
     {
         return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Name')
     }
 
-    [array] GetConfigCSVKeys()
+    [array] GetCSVHeaders(){
+        return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Value')
+    }
+    [array] GetConfigCSVKeys() #Deprecated
     {
         return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Value')
     }
@@ -59,4 +63,24 @@ class Mapping
             return ""
         }
     }
+
+    # Return the CSV associated with the string APIPath
+    [String] ExtractValueByAPIPath( [String] $ApiPath, [PSCustomObject] $row )
+    {
+        $CSVHeader = $this.GetCSVHeader( $ApiPath )
+        return $this.ExtractValueByCSVHeader( $CSVHeader, $row )
+    }
+    [String] ExtractValueByCSVHeader( [String] $CSVHeader, [PSCustomObject]  $row )
+    {
+        return $row.$CSVHeader;
+        #$ApiPath = $this.GetAPIPath($CSVHeader);
+        #return $this.ExtractValueByAPIPath( $ApiPath, $row )
+    }
+
+    [String] GetCSVHeader( $ApiPath )
+    {
+        return $this.config.$ApiPath;
+    }
+
+
 }

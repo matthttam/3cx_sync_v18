@@ -1,16 +1,23 @@
 ﻿Using module .\Modules\Config.psm1
 Using module .\Modules\ExtensionMapping.psm1
 Using module .\Modules\GroupMembershipMapping.psm1
+Using module .\Modules\HotdeskingMapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
 Using module .\Modules\3CX\Entity\GroupFactory.psm1
+Using module .\Modules\3CX\Entity\HotdeskingFactory.psm1
+
 
 [CmdletBinding(SupportsShouldProcess)]
 Param(
-    [Switch] $NoExtensions,
-    [Switch] $NoGroupMemberships,
-    [Switch] $NoNewExtensions,
-    [Switch] $NoUpdateExtensions
+    [Switch] $NoExtensions,         <# Do not create or update extensions#>
+    [Switch] $NoNewExtensions,      <# Do not create extensions #>
+    [Switch] $NoUpdateExtensions,   <# Do not update extensions #>
+    [Switch] $NoGroups,             <# Same as NoGroupMemberships#>
+    [Switch] $NoGroupMemberships,   <# Do not adjust any group memberships #>
+    [Switch] $NoHotdesking,         <# Do not create or update hotdesking #>
+    [Switch] $NoNewHotdesking,      <# Do not create hotdesking #>
+    [Switch] $NoUpdateHotdesking    <# Do not update hotdesking #>
 )
 
 # Set security protocols that are supported
@@ -205,7 +212,7 @@ if(-NOT $NoExtensions){
     }
 }
 
-if(-NOT $NoGroupMemberships){
+if(-NOT $NoGroupMemberships -and -NOT $NoGroups){
     ## Import GroupMembership CSV File
     try
     {
@@ -240,7 +247,7 @@ if(-NOT $NoGroupMemberships){
             [System.Collections.ArrayList] $SelectedExtensions = @() # Used to log what was added
 
             # Loop over CSV Data
-            foreach($row in $GroupMembershipImportCSV.Config){
+            foreach( $row in $GroupMembershipImportCSV.Config ){
                 # Determine Proper Extensions in Group
                 if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.config.($Group.object.Name).Conditions, $row) ){
                     # IF Not Found in Possible Extensions, Continue
@@ -302,5 +309,114 @@ if(-NOT $NoGroupMemberships){
             }
         }
     }
+}
+
+if( -NOT $NoHotdesking){
+    # Extract New and Update Hotdesking Mappings
+    $NewMapping = [HotdeskingMapping]::New($MappingConfig.Config.Hotdesking.New)
+    $UpdateMapping = [HotdeskingMapping]::New($MappingConfig.Config.Hotdesking.Update)
+
+    ## Import Hotdesking CSV File
+    try
+    {
+        $HotdeskingImportCSV = [Config]::New($MappingConfig.Config.Hotdesking.Path, [Config]::CSV)
+        #Verify ImportData isn't Empty
+        if(-not $HotdeskingImportCSV.Config.Count -gt 0){
+            Write-Error 'Import File is Empty' -ErrorAction Stop
+        }
+    }
+    catch
+    {
+        Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+    }
+
+    # Save HotdeskingListEndpoint to a variable
+    $HotdeskingEndpoint = $3CXApiConnection.Endpoints.HotdeskingListEndpoint;
+    
+    # Get A List of Hotdeskings from 3CX
+    try{
+        $HotdeskingList = $HotdeskingEndpoint.Get() | Select-Object -ExpandProperty 'list'
+    }catch {
+        Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
+    }
+
+    # Create Hotdesking Factory
+    $HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
+    
+    # Marshal the Hotdesking List into Hotdesking objects.
+    #$Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
+
+    # Get all Macs from the listed hotdeskings
+    #$HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
+
+    $HotdeskingMacs = $HotdeskingList | Select-Object -ExpandProperty ($NewMapping.GetCSVHeader('MacAddress'))
+    foreach( $row in $HotdeskingImportCSV.Config )
+    {
+        # Update Hotdesks
+        if($NewMapping.ExtractValueByAPIPath('MacAddress', $row) -in $HotdeskingMacs)
+        {
+            continue;
+            <#
+            if( $NoUpdateHotdesking -eq $false ){
+                try{
+                    # Use Mac Address to find Hotdeskings 
+                    #$CurrentExtension = $ExtensionFactory.makeExtension($row.$CSVNumberHeader)
+                } catch {
+                    
+                    Write-PSFMessage -Level Critical -Message ("Failed to Look Up Extension '{0}' due to an unexpected error. {1}" -f ($row.$CSVNumberHeader, $PSItem.Exception.Message))
+                    continue
+                }
+            }
+            #>
+        }else{
+        # Create Hotdesks
+            $HotdeskingCreationInfo = @{ 
+                'MacAddress' = $NewMapping.ExtractValueByAPIPath('MacAddress', $row)
+                'Model' = $NewMapping.ExtractValueByAPIPath('Model', $row)
+            }
+            Write-Verbose ("Need to Create Hotdesking: '{0}', '{1}'" -f $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model)
+            try {
+                $newHotdesking = $HotdeskingFactory.makeHotdesking( $HotdeskingCreationInfo );
+            }catch {
+                Write-PSFMessage -Level Critical -Message ("Failed to Stage Creation of New Hotdesking '{0}', '{1}' due to an unexpected error." -f $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model )
+                continue
+            }
+            
+            # Loop over values that need to be set
+            foreach( $CSVHeader in $NewMapping.GetConfigCSVKeys())
+                {
+                    if($NewMapping.GetApiPath($CSVHeader) -in $HotdeskingCreationInfo.Keys )
+                    {
+                        continue;
+                    } 
+
+                    $CSVValue = $NewMapping.ExtractValueByCSVHeader($CSVHeader, $row)
+                    $message = ("Staged update to new hotdesking '{0}',  for field '{1}'. Value: '{2}'" -f ($newHotdesking.GetName(), $CSVHeader, $CSVValue))
+                    try {
+                        if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
+                        {
+                            $UpdateResponse = $HotdeskingEndpoint.Update($newHotdesking, $NewMapping.GetApiPath($CSVHeader), $CSVValue )
+                            Write-PSFMessage -Level Output -Message ($message)
+                        }
+                    } catch {
+                        Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($HotdeskingCreationInfo.MacAddress))
+                        continue
+                    }
+                }
+                try {
+                    $message = ("Created Hotdesking: '{0}', '{1}', '{2}" -f $newHotdesking.GetName(), $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model)
+                    if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
+                    {
+                        $response = $HotdeskingEndpoint.Save($newHotdesking)    
+                        Write-PSFMessage -Level Output -Message ($message)
+                    }
+                }
+                catch {
+                    Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
+                }
+
+        }
+    }
+
 }
 Write-PSFMessage -Level Output -Message 'Sync Ended'
