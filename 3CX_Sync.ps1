@@ -341,7 +341,7 @@ if( -NOT $NoHotdesking){
     }
 
     # Create Hotdesking Factory
-    #$HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
+    $HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
     
     # Marshal the Hotdesking List into Hotdesking objects.
     #$Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
