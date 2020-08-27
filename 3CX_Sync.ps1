@@ -107,7 +107,7 @@ if(-NOT $NoExtensions){
     
     $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionListEndpoint)
     $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
-    $ExtensionNumbers = $Extensions | Select-Object -ExpandProperty id
+    $ExtensionNumbers = $Extensions | Select-Object -ExpandProperty object | Select-Object -ExpandProperty number
     $CSVNumberHeader = $NewMapping.Config.Number
     $UpdateMappingCSVKeys = $UpdateMapping.GetConfigCSVKeys()
     $NewMappingCSVKeys = $NewMapping.GetConfigCSVKeys()
