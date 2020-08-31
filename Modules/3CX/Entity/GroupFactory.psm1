@@ -28,7 +28,7 @@ Class GroupFactory
     }
 
     # Create group based on specific ID
-    [Group] makeGroup([string] $id)
+    [Group] makeGroup([int64] $id)
     {
         $payload = @{"id" = $id}
         $responseObject = $this._endpoint.set($payload)
