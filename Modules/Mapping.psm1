@@ -1,4 +1,5 @@
 Using module .\Config.psm1
+Using module .\3CX\Type.psm1
 
 class Mapping
 {
@@ -37,30 +38,31 @@ class Mapping
 
     [PSObject] ConvertToType( $Value, $attributeInfo )
     {
-        if($attributeInfo.Type-eq 'String'){
+        
+        if($attributeInfo.Type -eq [Type]::String  ){ 
             return $Value
-        }elseif($attributeInfo.Type -eq 'Enum'){
+        }elseif($attributeInfo.Type -eq [Type]::Enum ){ 
             return $attributeInfo.possibleValues[$Value]
-        }elseif($attributeInfo.Type -eq 'SelectedItem'){
+        }elseif($attributeInfo.Type -eq [Type]::SelectedItem ){ 
             return $attributeInfo.possibleValues | Where-Object Id -eq $Value
-        }elseif($attributeInfo.Type -eq 'Boolean'){
+        }elseif($attributeInfo.Type -eq [Type]::Boolean ){ 
             if($Value -eq '1' -or $Value -eq 'true'){
                 return $true
             }else{
                 return $false
             }
-        }elseif($attributeInfo.Type -eq 'Collection'){
+        }elseif($attributeInfo.Type -eq [Type]::Collection ){ 
             throw 'Unsupported api mapping type'
-        }elseif($attributeInfo.Type -eq 'File'){
+        }elseif($attributeInfo.Type -eq [Type]::File ){ 
             throw 'Unsupported api mapping type'
-        }elseif($attributeInfo.Type -eq 'Item'){
+        }elseif($attributeInfo.Type -eq [Type]::Item ){ 
             throw 'Unsupported api mapping type'
-        }elseif($attributeInfo.Type -eq 'ItemSet'){
+        }elseif($attributeInfo.Type -eq [Type]::ItemSet ){ 
             throw 'Unsupported api mapping'
-        }elseif($attributeInfo.Type -eq 'TimeRanges'){
+        }elseif($attributeInfo.Type -eq [Type]::TimeRanges ){ 
             throw 'Unsupported api mapping type'
         }else{
-            return ""
+            throw 'Unsupported api mapping type'
         }
     }
 
