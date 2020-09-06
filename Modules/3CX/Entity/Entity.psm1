@@ -4,7 +4,7 @@ Using module ..\Type.psm1
 Class Entity
 {
     [Endpoint] $_endpoint
-    [String] $Id
+    [string] $Id
     $object
 
     Entity($object, $endpoint)
@@ -63,5 +63,7 @@ Class Entity
         }
         return $payload
     }
+
+
 
 }
