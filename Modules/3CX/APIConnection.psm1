@@ -71,11 +71,7 @@ class APIConnection
     [PSObject] post([string]$Path, [hashtable] $Options)
     {
         $parameters = $this.ConnectionSettings
-        try{
-            return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing )
-        }catch{
-            throw $_.Exception
-        }
+        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing )
     }
 
 }
