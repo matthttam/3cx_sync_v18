@@ -80,27 +80,68 @@ Class Group : Entity
     {
         return $this.Members.selected
     }
-    <#
-    SetPossibleValueLookup([Array] $PossibleValues)
+    [PSObject] GetSelectedByNumber($number)
     {
-        foreach($PossibleValue in $PossibleValues){
-            $this.PossibleValueLookup[$PossibleValue.Number._value] = $PossibleValue
+        return $this.Members.selected | Where-Object -FilterScript {$_.Number._value -eq (""+$number)}
+    }
+
+    [String] GetRemoveMembersMessage([array] $members)
+    {
+        $MessageInfoTemplate = @{label="Info";expression={$_.Number._value + ' - ' + $_.FirstName._value + ' ' + $_.LastName._value}}
+        $ExtensionToAddInfo = $members | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
+        $message = ("Staged Update to Group '{0}' to Remove Extension(s) '{1}'" -f $this.GetName(), ($ExtensionToAddInfo -join "', '"))
+        return $message
+    }
+    [PSObject] RemoveMembers($members)
+    {
+        try{
+            Write-PSFMessage -Level Output -Message ($this.GetRemoveMembersMessage($members))
+            return $this._endpoint.RemoveMembers( $this, $members )
+        }catch{
+            Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
+            return $null
         }
     }
 
-    [PSObject] GetPossibleValues()
+    [String] GetAddMembersMessage([array] $members)
     {
-        return $this.Members.possibleValues
+        $MessageInfoTemplate = @{label="Info";expression={$_.Number._value + ' - ' + $_.FirstName._value + ' ' + $_.LastName._value}}
+        $ExtensionToAddInfo = $members | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
+        $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $this.GetName(), ($ExtensionToAddInfo -join "', '"))
+        return $message
+    }
+    [PSObject] AddMembers($members)
+    {
+        try{
+            Write-PSFMessage -Level Output -Message ($this.GetAddMembersMessage($members))
+            return $this._endpoint.AddMembers( $this, $members )
+        }catch{
+            Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
+            return $null
+        }
     }
 
-    [PSObject] GetSelected()
+    [String] GetSaveMessage()
     {
-        return $this.Members.selected
+        $message = ("Group {0} has been saved." -f $this.GetName())
+        return $message
+    }
+    
+    [PSObject] Save()
+    {
+        try{
+            Write-PSFMessage -Level Output -Message ($this.GetSaveMessage())
+            return $this._endpoint.Save( $this )
+        }catch{
+            Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $this.GetName() )
+            return $false
+        }
+        
     }
 
-    #[PSObject] GetPossibleValueByNumber([string]$Number){
-    #    return $this.PossibleValueLookup[$Number]
-    #}
-    #>
+    [string] GetName()
+    {
+        return $this.object.Name._value
+    }
 
 }
