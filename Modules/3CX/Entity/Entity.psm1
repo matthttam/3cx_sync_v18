@@ -5,6 +5,7 @@ Class Entity
 {
     [Endpoint] $_endpoint
     [string] $Id
+    [boolean] $Dirty
     $object
 
     Entity($object, $endpoint)
@@ -64,6 +65,17 @@ Class Entity
         return $payload
     }
 
-
+    SetDirty([boolean] $value)
+    {
+        $this.Dirty = $value
+    }
+    [boolean] GetDirty()
+    {
+        return $this.Dirty
+    }
+    [boolean] IsDirty()
+    {
+        return ($this.GetDirty() -eq $true)
+    }
 
 }
