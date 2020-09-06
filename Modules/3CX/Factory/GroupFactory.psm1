@@ -1,7 +1,8 @@
+Using module .\EntityFactory.psm1
 Using module ..\Endpoints\GroupListEndpoint.psm1
-Using module .\Group.psm1
+Using module ..\Entity\Group.psm1
 
-Class GroupFactory
+Class GroupFactory : EntityFactory
 {
     Static [Group[]] $Groups
     [GroupListEndpoint] $_endpoint
