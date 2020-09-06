@@ -71,22 +71,11 @@ Class Endpoint
         return $this.FormatResponse( $response, $options)
     }
 
-    [PSObject] Save($entity)
+    [PSObject] Save($entity) { return ($this.Save(@{})) }
+    [PSObject] Save($entity, $options)
     {
-        return $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
+        $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
+        return return $this.FormatResponse( $response, $options)
     }
-
-    # Functions used to convert CSV information for updates
-    <#
-    [hashtable] GetUpdatePayload( $PropertyPath, $CSVDataValue ){
-        $payload = @{
-            "Path" = @{
-                "ObjectId" = $this.Id
-                "PropertyPath" = $PropertyPath #$Mapping.ParsedConfig.$CSVHeader
-            }
-            "PropertyValue" = $CSVDataValue
-        }
-        return $payload
-    }#>
 
 }
