@@ -13,7 +13,7 @@ Param(
     [Switch] $NoExtensions,         <# Do not create or update extensions#>
     [Switch] $NoNewExtensions,      <# Do not create extensions #>
     [Switch] $NoUpdateExtensions,   <# Do not update extensions #>
-    [Switch] $NoGroups,             <# Same as NoGroupMemberships#>
+    [Alias("NoGroups")]
     [Switch] $NoGroupMemberships,   <# Do not adjust any group memberships #>
     [Switch] $NoHotdesking,         <# Do not create or update hotdesking #>
     [Switch] $NoNewHotdesking,      <# Do not create hotdesking #>
@@ -217,7 +217,7 @@ if(-NOT $NoExtensions){
     }
 }
 
-if(-NOT $NoGroupMemberships -and -NOT $NoGroups){
+if(-NOT $NoGroupMemberships){
     ## Import GroupMembership CSV File
     try
     {
