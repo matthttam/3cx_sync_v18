@@ -32,7 +32,7 @@ Class GroupListEndpoint : Endpoint
         #return $this.ReadProperty($payload)
     }
 
-    [PSObject] QueryMembers($group, $state)
+    [PSObject] QueryMembers( $group, $state )
     {
         $payload = @{
             "Path" = @{
@@ -49,6 +49,39 @@ Class GroupListEndpoint : Endpoint
         }while( $State.start -lt $group.object.Members.count )
         
         return $Members
+    }
+
+    [PSObject] RemoveMembers( $group, $members )
+    {
+        $payload = $this.GetPayloadBody()
+        $payload.Path.ObjectId = $group.Id
+        $payload.Path.PropertyPath += @{"Name" = "Members"}
+        $payload.PropertyValue = @{"Delete" = @{"Ids" = @($members.Id); "IsAllSelected" = $false; "Search" = ""}}
+        $response = $this.Update($payload)
+        $group.SetDirty($true)
+        return $response 
+    }
+
+    [PSObject] AddMembers( $group, $members )
+    {
+        $payload = $this.GetPayloadBody()
+        $payload.Path.ObjectId = $group.Id
+        $payload.Path.PropertyPath += @{"Name" = "Members"}
+        $payload.PropertyValue = @{"Add" = @{"Ids" = @($members.Id); "IsAllSelected" = $false; "Search" = ""}}
+        $response = $this.Update($payload)
+        $group.SetDirty($true)
+        return $response 
+    }
+
+    [Hashtable] GetPayloadBody()
+    {
+        return @{
+            "Path" = @{
+                "ObjectId" = ""
+                "PropertyPath" = @()
+            }
+            "PropertyValue" = @{}
+        }
     }
     
     <#[PSObject] QueryAllMembers($group){
