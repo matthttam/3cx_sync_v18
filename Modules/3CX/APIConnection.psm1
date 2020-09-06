@@ -35,11 +35,25 @@ class APIConnection
             Write-Error 'Failed to authenticate' -ErrorAction Stop
             throw [System.Security.Authentication.InvalidCredentialException]::new("Failed to authenticate")
         }
-        $Cookies = $this.Session.Cookies.GetCookies('{0}/login' -f $this.BaseUrl)
-        $XSRF = ($Cookies | Where-Object  name -eq "XSRF-TOKEN").Value
+        #$Cookies = $this.Session.Cookies.GetCookies('{0}/login' -f $this.BaseUrl)
+        #$CookieHeader = $this.Session.Cookies.GetCookieHeader('{0}/login' -f $this.BaseUrl)
+        #$XSRF = ($Cookies | Where-Object  name -eq "XSRF-TOKEN").Value
         $this.ConnectionSettings = @{
             WebSession = $this.Session
-            Headers = @{"x-xsrf-token"="$XSRF"}
+            #Headers = @{"x-xsrf-token"="$XSRF"}
+            <#Headers = @{
+                "cookie"=$CookieHeader
+                "authority"="owensboro.my3cx.us:5001"
+                "scheme"="https"
+                "accept"="application/json, text/plain, */*"
+                "origin"="https://owensboro.my3cx.us:5001"
+                "sec-fetch-site"="same-origin"
+                "sec-fetch-mode"="cors"
+                "sec-fetch-dest"="empty"
+                "referer"="https://owensboro.my3cx.us:5001/"
+                "accept-encoding"="gzip, deflate, br"
+                "accept-language"="en-US,en;q=0.9"
+            }#>
             ContentType = "application/json;charset=UTF-8"
         }
     }
@@ -57,7 +71,11 @@ class APIConnection
     [PSObject] post([string]$Path, [hashtable] $Options)
     {
         $parameters = $this.ConnectionSettings
-        return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing )
+        try{
+            return (Invoke-WebRequest -Uri ('{0}/{1}' -f $this.BaseUrl, $Path) -Method Post @parameters @Options -UseBasicParsing )
+        }catch{
+            throw $_.Exception
+        }
     }
 
 }
