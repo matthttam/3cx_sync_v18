@@ -270,8 +270,10 @@ if(-NOT $NoGroupMemberships){
                         # Ensure this number is a possible value
                         $FoundPossibleValue = $CurrentGroup.QueryPossibleValuesByNumber($row.Number)
                         if($FoundPossibleValue){
-                            # Add the found value to $ExtensionsToAdd
-                            $ExtensionsToAdd += $FoundPossibleValue  
+                            # Add the found value to $ExtensionsToAdd if not already in it
+                            if( -NOT ( $ExtensionsToAdd -Contains $FoundPossibleValue ) ){
+                                $ExtensionsToAdd += $FoundPossibleValue  
+                            }
                         }else{
                             # If not show a warning
                             Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
