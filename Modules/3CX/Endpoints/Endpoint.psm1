@@ -1,4 +1,4 @@
-Using module ..\Type.psm1
+Using module ..\ValueType.psm1
 
 Class Endpoint
 {
