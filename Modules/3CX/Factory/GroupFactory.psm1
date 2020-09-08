@@ -28,7 +28,7 @@ Class GroupFactory : EntityFactory
         return $return
     }
 
-    [Group] makeGroup([int32] $id){ return makeGroup([int64] $id)}
+    [Group] makeGroup([int32] $id){ return $this.makeGroup([int64] $id)}
     # Create group based on specific ID
     [Group] makeGroup([int64] $id)
     {

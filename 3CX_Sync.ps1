@@ -246,7 +246,7 @@ if(-NOT $NoGroupMemberships){
                 # Create the group object (calls set)
                 $CurrentGroup = $GroupFactory.makeGroup($Group.Id);
             }catch{
-                Write-PSFMessage -Level Critical -Message ("Failed to Look Up Group '{0}' due to an unexpected error." -f ($Group.object.Name))
+                Write-PSFMessage -Level Critical -Message ("Failed to Look Up Group '{0}' due to an unexpected error." -f ($Group.Name))
                 continue
             }
             # Currently Selected Extensions that will be widdled down as we find them in the CSV
