@@ -23,7 +23,7 @@ Class Entity
     # Return appropriate selected values based on type
     [PSObject] GetObjectValue( $attributeInfo )
     {
-        if($attributeInfo.Type -in ([Type]::Enum, [Type]::File, [Type]::ItemSet)){
+        if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
             return $attributeInfo.selected
         }else{
             return $attributeInfo._value
@@ -45,7 +45,7 @@ Class Entity
         }else{
             return $false
         }
-        if( $object.$p1.type -eq [Type]::Collection ) {
+        if( $object.$p1.type -eq [ValueType]::Collection ) {
                 return $this.GetObjectAttributeInfo($p2, $object.$p1._value)
         }
         else {
