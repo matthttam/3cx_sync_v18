@@ -44,7 +44,7 @@ Class GroupListEndpoint : Endpoint
         $Members = [System.Collections.ArrayList] @()
         Do{
             $response = $this.Update($payload)
-            $Members += $response.Item.Members.Selected
+            $Members += ($response | Select-Object -ExpandProperty Item).Members.Selected
             $State.start += $group.object.Members.itemsByPage
         }while( $State.start -lt $group.object.Members.count )
         
