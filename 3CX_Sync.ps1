@@ -290,7 +290,7 @@ if(-NOT $NoGroupMemberships){
             {
                 # Stage Adding Members
                 # If WhatIf isn't set
-                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($members)))
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
                 {
                     #Stage Adding Members, continue on error
                     try{
@@ -298,6 +298,8 @@ if(-NOT $NoGroupMemberships){
                     }catch{
                         continue
                     }
+                }else{
+                    $CurrentGroup.SetDirty($true);
                 }
             }
 
@@ -306,7 +308,7 @@ if(-NOT $NoGroupMemberships){
             {
                 # Stage Removing Members
                 # If WhatIf isn't set
-                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetRemoveMembersMessage($members)))
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetRemoveMembersMessage($ExtensionsToRemove)))
                 {
                     #Stage Removing Members, continue on error
                     try{
@@ -314,20 +316,25 @@ if(-NOT $NoGroupMemberships){
                     }catch{
                         continue
                     }
+                }else{
+                    $CurrentGroup.SetDirty($true);
                 }
             }
 
-            # If What If isn't set
-            if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetSaveMessage()))
+            # Check if current group is dirty first
+            if($CurrentGroup.IsDirty())
             {
-                # Check if current group is dirty first
-                if($CurrentGroup.IsDirty()){
+                # If What If isn't set
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetSaveMessage()))
+                {
                     # Save Any Staged Changes Group
                     try{
                         $response = $CurrentGroup.Save()
                     }catch{
                         continue
                     }
+                }else{
+                    $CurrentGroup.SetDirty($false)
                 }
             }
         }
