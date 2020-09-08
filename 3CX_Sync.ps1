@@ -374,10 +374,10 @@ if( -NOT $NoHotdesking){
     $HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
     
     # Marshal the Hotdesking List into Hotdesking objects.
-    #$Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
+    $Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
 
     # Get all Macs from the listed hotdeskings
-    #$HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
+    $HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
 
     $HotdeskingMacs = $HotdeskingList | Select-Object -ExpandProperty ($NewMapping.GetCSVHeader('MacAddress'))
     foreach( $row in $HotdeskingImportCSV.Config )
@@ -386,18 +386,6 @@ if( -NOT $NoHotdesking){
         if($NewMapping.ExtractValueByAPIPath('MacAddress', $row) -in $HotdeskingMacs)
         {
             continue;
-            <#
-            if( $NoUpdateHotdesking -eq $false ){
-                try{
-                    # Use Mac Address to find Hotdeskings 
-                    #$CurrentExtension = $ExtensionFactory.makeExtension($row.$CSVNumberHeader)
-                } catch {
-                    
-                    Write-PSFMessage -Level Critical -Message ("Failed to Look Up Extension '{0}' due to an unexpected error. {1}" -f ($row.$CSVNumberHeader, $PSItem.Exception.Message))
-                    continue
-                }
-            }
-            #>
         }else{
         # Create Hotdesks
             $HotdeskingCreationInfo = @{ 
