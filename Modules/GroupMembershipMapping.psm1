@@ -11,6 +11,9 @@ class GroupMembershipMapping : Mapping
     }
 
     [boolean] EvaluateConditions([array]$Conditions, $row){
+        if($Conditions -eq $null){
+            throw 'Unable to evaluate null conditions'
+        }
         $return = $true
         foreach($Condition in $Conditions){
             if($row.($Condition.Field) -ne $Condition.Value){

@@ -35,11 +35,9 @@ class APIConnection
             Write-Error 'Failed to authenticate' -ErrorAction Stop
             throw [System.Security.Authentication.InvalidCredentialException]::new("Failed to authenticate")
         }
-        $Cookies = $this.Session.Cookies.GetCookies('{0}/login' -f $this.BaseUrl)
-        $XSRF = ($Cookies | Where-Object  name -eq "XSRF-TOKEN").Value
+
         $this.ConnectionSettings = @{
             WebSession = $this.Session
-            Headers = @{"x-xsrf-token"="$XSRF"}
             ContentType = "application/json;charset=UTF-8"
         }
     }

@@ -1,7 +1,8 @@
+Using module .\EntityFactory.psm1
 Using module ..\Endpoints\GroupListEndpoint.psm1
-Using module .\Group.psm1
+Using module ..\Entity\Group.psm1
 
-Class GroupFactory
+Class GroupFactory : EntityFactory
 {
     Static [Group[]] $Groups
     [GroupListEndpoint] $_endpoint
@@ -28,7 +29,7 @@ Class GroupFactory
     }
 
     # Create group based on specific ID
-    [Group] makeGroup([string] $id)
+    [Group] makeGroup([int64] $id)
     {
         $payload = @{"id" = $id}
         $responseObject = $this._endpoint.set($payload)

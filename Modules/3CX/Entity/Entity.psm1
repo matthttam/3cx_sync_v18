@@ -1,9 +1,11 @@
 Using module ..\Endpoints\Endpoint.psm1
+Using module ..\Type.psm1
 
 Class Entity
 {
     [Endpoint] $_endpoint
-    [String] $Id
+    [string] $Id
+    [boolean] $Dirty = $false
     $object
 
     Entity($object, $endpoint)
@@ -13,7 +15,7 @@ Class Entity
         if($object.ActiveObject){
             $this.object = $object.ActiveObject
         }else{
-            $this.object = @{}
+            $this.object = $object
         }
     }
 
@@ -21,7 +23,7 @@ Class Entity
     # Return appropriate selected values based on type
     [PSObject] GetObjectValue( $attributeInfo )
     {
-        if($attributeInfo.Type -in ('Enum', 'File', 'ItemSet')){
+        if($attributeInfo.Type -in ([Type]::Enum, [Type]::File, [Type]::ItemSet)){
             return $attributeInfo.selected
         }else{
             return $attributeInfo._value
@@ -43,7 +45,7 @@ Class Entity
         }else{
             return $false
         }
-        if($object.$p1.type -eq 'Collection') {
+        if( $object.$p1.type -eq [Type]::Collection ) {
                 return $this.GetObjectAttributeInfo($p2, $object.$p1._value)
         }
         else {
@@ -61,6 +63,19 @@ Class Entity
             "PropertyValue" = $CSVDataValue
         }
         return $payload
+    }
+
+    SetDirty([boolean] $value)
+    {
+        $this.Dirty = $value
+    }
+    [boolean] GetDirty()
+    {
+        return $this.Dirty
+    }
+    [boolean] IsDirty()
+    {
+        return ($this.GetDirty() -eq $true)
     }
 
 }

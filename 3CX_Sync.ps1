@@ -4,7 +4,7 @@ Using module .\Modules\GroupMembershipMapping.psm1
 Using module .\Modules\HotdeskingMapping.psm1
 Using module .\Modules\3CX\APIConnection.psm1
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
-Using module .\Modules\3CX\Entity\GroupFactory.psm1
+Using module .\Modules\3CX\Factory\GroupFactory.psm1
 Using module .\Modules\3CX\Entity\HotdeskingFactory.psm1
 
 
@@ -13,7 +13,7 @@ Param(
     [Switch] $NoExtensions,         <# Do not create or update extensions#>
     [Switch] $NoNewExtensions,      <# Do not create extensions #>
     [Switch] $NoUpdateExtensions,   <# Do not update extensions #>
-    [Switch] $NoGroups,             <# Same as NoGroupMemberships#>
+    [Alias("NoGroups")]
     [Switch] $NoGroupMemberships,   <# Do not adjust any group memberships #>
     [Switch] $NoHotdesking,         <# Do not create or update hotdesking #>
     [Switch] $NoNewHotdesking,      <# Do not create hotdesking #>
@@ -84,10 +84,11 @@ if(-NOT $NoExtensions){
     # Extract New and Update extension mappings
     $NewMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.New)
     $UpdateMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.Update)
+    $ExtensionNumberHeader = $MappingConfig.Config.Extension.Number
     ## Import Extension CSV File
     try
     {
-        $ExtensionImportCSV = [Config]::New($MappingCOnfig.Config.Extension.Path, [Config]::CSV)
+        $ExtensionImportCSV = [Config]::New($MappingConfig.Config.Extension.Path, [Config]::CSV)
         #Verify ImportData isn't Empty
         if(-not $ExtensionImportCSV.Config.Count -gt 0){
             Write-Error 'Import File is Empty' -ErrorAction Stop
@@ -101,26 +102,32 @@ if(-NOT $NoExtensions){
     # Get A List of Extensions
     try{
         $ExtensionList = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Get() | Select-Object -ExpandProperty 'list'
-    }catch {
+    } catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
     
     $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionListEndpoint)
     $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
-    $ExtensionNumbers = $Extensions | Select-Object -ExpandProperty id
-    $CSVNumberHeader = $NewMapping.Config.Number
+    
+    #Build Lookup Table for finding the ID based on number
+    $ExtensionsNumberToID = @{}
+    foreach($Extension in $Extensions){
+        $ExtensionsNumberToID.Add($Extension.object.number, $Extension.id)
+    }
+
     $UpdateMappingCSVKeys = $UpdateMapping.GetConfigCSVKeys()
     $NewMappingCSVKeys = $NewMapping.GetConfigCSVKeys()
 
     # Loop over CSV
     foreach ($row in $ExtensionImportCSV.Config) {
         # If the row's CSVNumberHeader does exist in the extentions list, Update
-        if($row.$CSVNumberHeader -in $ExtensionNumbers){
+        if($row.$ExtensionNumberHeader -in $Extensions.object.number){
+            $CurrentExtensionNumber = $row.$ExtensionNumberHeader
             if($NoUpdateExtensions -eq $false){
                 try{
-                    $CurrentExtension = $ExtensionFactory.makeExtension($row.$CSVNumberHeader)
+                    $CurrentExtension = $ExtensionFactory.makeExtension( $ExtensionsNumberToID[$CurrentExtensionNumber] )
                 }catch {
-                    Write-PSFMessage -Level Critical -Message ("Failed to Look Up Extension '{0}' due to an unexpected error. {1}" -f ($row.$CSVNumberHeader, $PSItem.Exception.Message))
+                    Write-PSFMessage -Level Critical -Message ("Failed to Look Up Extension '{0}' due to an unexpected error. {1}" -f ($CurrentExtensionNumber, $PSItem.Exception.Message))
                     continue
                 }
                 
@@ -135,9 +142,9 @@ if(-NOT $NoExtensions){
                     {
                         $UpdateRequired = $true
                         $payload = $CurrentExtension.GetUpdatePayload($UpdateMapping.GetParsedConfig($CSVHeader), $CSVValue)
-                        $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CurrentExtensionValue, $CSVValue))
+                        $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue))
                         try{
-                            if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                            if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                             {
                                 $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
                                 Write-PSFMessage -Level Output -Message ($message)
@@ -151,8 +158,8 @@ if(-NOT $NoExtensions){
                 if($UpdateRequired){
                     try {
 
-                        $message = ("Updated Extension: '{0}'" -f $row.$CSVNumberHeader)
-                        if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                        $message = ("Updated Extension: '{0}'" -f $CurrentExtensionNumber)
+                        if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                         {
                             $response = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Save($CurrentExtension)
                             Write-PSFMessage -Level Output -Message ($message)
@@ -160,19 +167,19 @@ if(-NOT $NoExtensions){
                         
                     }
                     catch {
-                        Write-PSFMessage -Level Critical -Message ("Failed to Update Extension: '{0}'" -f $row.$CSVNumberHeader)
+                        Write-PSFMessage -Level Critical -Message ("Failed to Update Extension: '{0}'" -f $CurrentExtensionNumber)
                     }
                 }
             }
         # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
         }else{
             if($NoNewExtensions -eq $false){
-                Write-Verbose ("Need to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
+                Write-Verbose ("Need to Create Extension: '{0}'" -f $CurrentExtensionNumber)
                 # Begin building new extension
                 try {
                     $NewExtension = $ExtensionFactory.makeExtension()
                 }catch {
-                    Write-PSFMessage -Level Critical -Message ("Failed to Stage Creation of New Extension '{0}' due to an unexpected error." -f ($row.$CSVNumberHeader))
+                    Write-PSFMessage -Level Critical -Message ("Failed to Stage Creation of New Extension '{0}' due to an unexpected error." -f ($CurrentExtensionNumber))
                     continue
                 }
 
@@ -182,37 +189,35 @@ if(-NOT $NoExtensions){
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
                     $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
 
-                    $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($row.$CSVNumberHeader, $CSVHeader, $CSVValue))
+                    $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
                     try {
-                        if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                        if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                         {
                             $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
                             Write-PSFMessage -Level Output -Message ($message)
                         }
                     } catch {
-                        Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($row.$CSVNumberHeader))
+                        Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($CurrentExtensionNumber))
                         continue
                     }
                 }
                 try {
-                    $message = ("Created Extension: '{0}'" -f $row.$CSVNumberHeader)
-                    if ($PSCmdlet.ShouldProcess($row.$CSVNumberHeader, $message))
+                    $message = ("Created Extension: '{0}'" -f $CurrentExtensionNumber)
+                    if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                     {
                         $response = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Save($NewExtension)    
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                 }
                 catch {
-                    Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
+                    Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $CurrentExtensionNumber)
                 }
-                
-                
             }
         }
     }
 }
 
-if(-NOT $NoGroupMemberships -and -NOT $NoGroups){
+if(-NOT $NoGroupMemberships){
     ## Import GroupMembership CSV File
     try
     {
@@ -233,78 +238,103 @@ if(-NOT $NoGroupMemberships -and -NOT $NoGroups){
     # Get Groups
     $GroupList = $3CXApiConnection.Endpoints.GroupListEndpoint.Get() | Select-Object -ExpandProperty 'list'
     $GroupFactory = [GroupFactory]::new($3CXApiConnection.Endpoints.GroupListEndpoint)
-    $Groups = $GroupFactory.makeGroup($GroupList)
-    foreach($Group in $Groups){
-        $GroupMembershipMappingNames = $GroupMembershipMapping.GetConfigPathKeys()
-        if($Group.object.Name -in $GroupMembershipMappingNames){
+    $GroupMembershipMappingNames = $GroupMembershipMapping.GetConfigPathKeys()
+    foreach( $Group in $GroupList ){
+        # If this group is in the mapping file for membership management
+        if($Group.Name -in $GroupMembershipMappingNames){
             try{
-                $CurrentGroup = $GroupFactory.makeGroup($Group.object.Id)
+                # Create the group object (calls set)
+                $CurrentGroup = $GroupFactory.makeGroup($Group.Id);
             }catch{
                 Write-PSFMessage -Level Critical -Message ("Failed to Look Up Group '{0}' due to an unexpected error." -f ($Group.object.Name))
                 continue
             }
-            
-            [System.Collections.ArrayList] $SelectedExtensions = @() # Used to log what was added
+            # Currently Selected Extensions that will be widdled down as we find them in the CSV
+            $CachedSelected = [Collections.ArrayList] ($CurrentGroup.GetSelected())
+            $ExtensionsToAdd = @()
+            $ExtensionsToRemove = @()
 
-            # Loop over CSV Data
+            # Loop over CSV Data and determine what extensions should be added or removed from this group
             foreach( $row in $GroupMembershipImportCSV.Config ){
                 # Determine Proper Extensions in Group
-                if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.config.($Group.object.Name).Conditions, $row) ){
-                    # IF Not Found in Possible Extensions, Continue
-                    $FoundValue = $CurrentGroup.GetPossibleValueByNumber($row.Number)
-                    if(-not $FoundValue){
-                        Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
+                if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.config.($Group.Name).Conditions, $row) ){
+                    # Null COALESCE for Powershell v5. Find                     
+                    #$FoundSelected = ( ($CurrentGroup.GetSelected() | Where-Object -FilterScript {$_.Number._value -eq (""+$row.Number)}), $false -ne $null)[0]
+                    $FoundSelected = ( ($CurrentGroup.GetSelectedByNumber($row.Number) ), $false -ne $null)[0]
+
+                    # If this Number is Selected Already
+                    if( $FoundSelected ){
+                        $CachedSelected.Remove($FoundSelected) # Remove that number from the list
                         Continue
                     }else{
-                        if(-not ($SelectedExtensions -contains $FoundValue)){
-                            $SelectedExtensions += $FoundValue
+                        # Ensure this number is a possible value
+                        $FoundPossibleValue = $CurrentGroup.QueryPossibleValuesByNumber($row.Number)
+                        if($FoundPossibleValue){
+                            # Add the found value to $ExtensionsToAdd if not already in it
+                            if( -NOT ( $ExtensionsToAdd -Contains $FoundPossibleValue ) ){
+                                $ExtensionsToAdd += $FoundPossibleValue  
+                            }
+                        }else{
+                            # If not show a warning
+                            Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
+                            continue;
                         }
                     }
                 }
             }
 
-            $Comparison = Compare-Object -ReferenceObject ($CurrentGroup.GetSelected()) -DifferenceObject ($SelectedExtensions | Select-Object -ExpandProperty Id) -IncludeEqual
-            if(($Comparison | Where-Object -Property SideIndicator -ne '==').count  -ne 0){
-                
-                $ExtensionIdsToAdd = $Comparison | Where-Object -Property SideIndicator -ne '<=' | Select-Object -ExpandProperty InputObject
-                $NewExtensionIdsToAdd = $Comparison | Where-Object -Property SideIndicator -eq '=>' | Select-Object -ExpandProperty InputObject
-                $ExtensionIdsToRemove = $Comparison | Where-Object -Property SideIndicator -Eq '<=' | Select-Object -ExpandProperty InputObject
-                $MessageInfoTemplate = @{label="Info";expression={$_.Number._value + ' - ' + $_.FirstName._value + ' ' + $_.LastName._value}}
+            $ExtensionsToRemove = $CachedSelected
 
-                if($ExtensionIdsToAdd.count -gt 0)
+            # If there are extensions to add
+            if($ExtensionsToAdd.count -gt 0)
+            {
+                # Stage Adding Members
+                # If WhatIf isn't set
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
                 {
-                    $ExtensionToAddInfo = $CurrentGroup.Object.Members.possibleValues | Where-Object -FilterScript {$_.Id -in $NewExtensionIdsToAdd} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
-                    $message = ("Staged Update to Group '{0}' to Add Extension(s) '{1}'" -f $Group.object.Name, ($ExtensionToAddInfo -join "', '"))
+                    #Stage Adding Members, continue on error
                     try{
-                        if ($PSCmdlet.ShouldProcess($Group.object.Name, $message))
-                        {
-                            $payload = $CurrentGroup.GetUpdatePayload(@(@{"Name" = "Members"}), $ExtensionIdsToAdd)
-                            $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
-                            Write-PSFMessage -Level Output -Message ($message)
-                        }
+                        $CurrentGroup.AddMembers($ExtensionsToAdd);
                     }catch{
-                        Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($Group.object.Name))
-                        continue;
+                        continue
                     }
-
-                    try{
-                        $AddMessage = ("Updated Group: '{0}'. Added extension(s): '{1}'" -f $Group.object.Name, ($ExtensionToAddInfo -join "', '") )
-                        if ($PSCmdlet.ShouldProcess($Group.object.Name, $AddMessage))
-                        {
-                            $response = $3CXApiConnection.Endpoints.GroupListEndpoint.Save($CurrentGroup)    
-                            Write-PSFMessage -Level Output -Message ($AddMessage)
-                        }
-                    }catch{
-                        Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $Group.object.Name )
-                    }
+                }else{
+                    $CurrentGroup.SetDirty($true);
                 }
+            }
 
-                if($ExtensionIdsToRemove.count -gt 0){
-                    $ExtensionToRemoveInfo = $CurrentGroup.Object.Members.possibleValues | Where-Object -FilterScript {$_.Id -in $ExtensionIdsToRemove} | Select-Object -Property $MessageInfoTemplate | Select-Object -ExpandProperty Info
-                    $RemovedMessage = ("Updated Group: '{0}'. Removed extension(s): '{1}'" -f $Group.object.Name, ($ExtensionToRemoveInfo -join "', '") )
-                    if($PSCmdlet.ShouldProcess($Group.object.Name, $RemovedMessage)){
-                        Write-PSFMessage -Level Output -Message ($RemovedMessage)
+            # If there are extensions to remove
+            if($ExtensionsToRemove.count -gt 0)
+            {
+                # Stage Removing Members
+                # If WhatIf isn't set
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetRemoveMembersMessage($ExtensionsToRemove)))
+                {
+                    #Stage Removing Members, continue on error
+                    try{
+                        $CurrentGroup.RemoveMembers($ExtensionsToAdd);
+                    }catch{
+                        continue
                     }
+                }else{
+                    $CurrentGroup.SetDirty($true);
+                }
+            }
+
+            # Check if current group is dirty first
+            if($CurrentGroup.IsDirty())
+            {
+                # If What If isn't set
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetSaveMessage()))
+                {
+                    # Save Any Staged Changes Group
+                    try{
+                        $response = $CurrentGroup.Save()
+                    }catch{
+                        continue
+                    }
+                }else{
+                    $CurrentGroup.SetDirty($false)
                 }
             }
         }

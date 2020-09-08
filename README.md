@@ -1,5 +1,10 @@
 # README #
 
+I am an independent developer and am in no way associated or affilicated with 3CX Ltd. This software comes with no warranty and no gaurantee of working. That being said, I work very hard to ensure this program continues to work.
+
+### NOTICE ###
+At this time this application is not compatible with the latest point update from 3CX. The version that is failing is: 16.0.641 and I am working diligently to roll out 3.0 which will resolve this issue.
+
 ### What is this repository for? ###
 
 * Powershell program that can synchronize extensions in any 3CX installation
