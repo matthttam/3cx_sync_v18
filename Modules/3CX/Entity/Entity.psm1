@@ -5,7 +5,7 @@ Class Entity
 {
     [Endpoint] $_endpoint
     [string] $Id
-    [boolean] $Dirty
+    [boolean] $Dirty = $false
     $object
 
     Entity($object, $endpoint)
