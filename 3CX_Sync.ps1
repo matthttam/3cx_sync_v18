@@ -121,8 +121,8 @@ if(-NOT $NoExtensions){
     # Loop over CSV
     foreach ($row in $ExtensionImportCSV.Config) {
         # If the row's CSVNumberHeader does exist in the extentions list, Update
-        if($row.$ExtensionNumberHeader -in $Extensions.object.number){
-            $CurrentExtensionNumber = $row.$ExtensionNumberHeader
+        $CurrentExtensionNumber = $row.$ExtensionNumberHeader
+        if($CurrentExtensionNumber -in $Extensions.object.number){
             if($NoUpdateExtensions -eq $false){
                 try{
                     $CurrentExtension = $ExtensionFactory.makeExtension( $ExtensionsNumberToID[$CurrentExtensionNumber] )
