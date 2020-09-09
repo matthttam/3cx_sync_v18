@@ -312,7 +312,7 @@ if(-NOT $NoGroupMemberships){
                 {
                     #Stage Removing Members, continue on error
                     try{
-                        $CurrentGroup.RemoveMembers($ExtensionsToAdd);
+                        $CurrentGroup.RemoveMembers($ExtensionsToRemove);
                     }catch{
                         continue
                     }
