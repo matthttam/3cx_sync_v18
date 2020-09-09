@@ -77,7 +77,7 @@ Class Endpoint
     {
         $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
         $entity.SetDirty($false);
-        return return $this.FormatResponse( $response, $options)
+        return $this.FormatResponse( $response, $options)
     }
 
 }
