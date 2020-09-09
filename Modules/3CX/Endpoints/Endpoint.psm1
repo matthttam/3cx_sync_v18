@@ -40,7 +40,8 @@ Class Endpoint
     }
     [PSObject] New($options)
     {
-        $response =  $this.APIConnection.post($this.GetEndpointPath('new'))
+        $payload = @{"Param" = @{}}
+        $response =  $this.APIConnection.post($this.GetEndpointPath('new'), @{'Body' = ($payload | ConvertTo-Json )})
         return $this.FormatResponse( $response, $options)
     }
 
