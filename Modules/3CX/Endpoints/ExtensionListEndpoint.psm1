@@ -15,6 +15,6 @@ Class ExtensionListEndpoint : Endpoint
 
     [PSObject] Save($extension)
     {
-        return $this.APIConnection.post('edit/save', @{'Body' = ($extension.Id | ConvertTo-Json -Depth 10)})
+        return $this.APIConnection.post('edit/save', @{'Body' = ([int]$extension.Id | ConvertTo-Json -Depth 10)})
     }
 }

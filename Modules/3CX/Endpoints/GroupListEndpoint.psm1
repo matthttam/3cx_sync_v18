@@ -44,7 +44,7 @@ Class GroupListEndpoint : Endpoint
         $Members = [System.Collections.ArrayList] @()
         Do{
             $response = $this.Update($payload)
-            $Members += $response.Item.Members.Selected
+            $Members += ($response | Select-Object -ExpandProperty Item).Members.Selected
             $State.start += $group.object.Members.itemsByPage
         }while( $State.start -lt $group.object.Members.count )
         
@@ -83,27 +83,4 @@ Class GroupListEndpoint : Endpoint
             "PropertyValue" = @{}
         }
     }
-    
-    <#[PSObject] QueryAllMembers($group){
-        $State =  @{"Start" = 0; "SortBy" = $null; "Reverse" = $false; "Search" = $null}
-        $Members = [System.Collections.ArrayList] @()
-        while($State.start -lt $group.object.Members.count){
-            $Members += ($this.QueryMembers($group, $state)).Item.Members.selected
-            $State.start += $group.object.Members.itemsByPage
-        }
-        return $Members
-    }
-
-    [PSObject] QueryAllPossibleValues($group){
-        $State =  @{"Start" = 0; "SortBy" = $null; "Reverse" = $false; "Search" = $null}
-        $PossibleValues = [System.Collections.ArrayList] @()
-        Do{
-            $response = $this.QueryPossibleValues($group, $state)
-            $PossibleValues += $response.PossibleValues
-            $State.start += $group.object.Members.itemsByPage
-        }while( $State.start -lt $response.count )
-        return $PossibleValues
-    }#>
-
-
 }

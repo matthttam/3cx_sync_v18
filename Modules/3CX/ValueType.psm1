@@ -1,4 +1,4 @@
-class Type {
+class ValueType {
     static [string] $String = 3
     static [string] $Enum = 11
     static [string] $SelectedItem = 10
@@ -9,7 +9,7 @@ class Type {
     static [string] $ItemSet = 13 #9?
     static [string] $TimeRanges = 6
 
-    Type([PSCustomObject] $config)
+    ValueType([PSCustomObject] $config)
     {
         
     }

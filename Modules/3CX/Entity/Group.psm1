@@ -103,8 +103,10 @@ Class Group : Entity
     [PSObject] RemoveMembers($members)
     {
         try{
+            
+            $response = $this._endpoint.RemoveMembers( $this, $members )
             Write-PSFMessage -Level Output -Message ($this.GetRemoveMembersMessage($members))
-            return $this._endpoint.RemoveMembers( $this, $members )
+            return $response
         }catch{
             Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
             return $null
@@ -124,8 +126,10 @@ Class Group : Entity
     [PSObject] AddMembers($members)
     {
         try{
+            
+            $response = $this._endpoint.AddMembers( $this, $members )
             Write-PSFMessage -Level Output -Message ($this.GetAddMembersMessage($members))
-            return $this._endpoint.AddMembers( $this, $members )
+            return $response
         }catch{
             Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
             return $null
@@ -141,8 +145,10 @@ Class Group : Entity
     [PSObject] Save()
     {
         try{
+            
+            $response = $this._endpoint.Save( $this )
             Write-PSFMessage -Level Output -Message ($this.GetSaveMessage())
-            return $this._endpoint.Save( $this )
+            return $response
         }catch{
             Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $this.GetName() )
             return $false

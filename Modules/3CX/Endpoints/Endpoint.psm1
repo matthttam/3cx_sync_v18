@@ -1,4 +1,4 @@
-Using module ..\Type.psm1
+Using module ..\ValueType.psm1
 
 Class Endpoint
 {
@@ -40,7 +40,8 @@ Class Endpoint
     }
     [PSObject] New($options)
     {
-        $response =  $this.APIConnection.post($this.GetEndpointPath('new'))
+        $payload = @{"Param" = @{}}
+        $response =  $this.APIConnection.post($this.GetEndpointPath('new'), @{'Body' = ($payload | ConvertTo-Json )})
         return $this.FormatResponse( $response, $options)
     }
 
@@ -71,12 +72,12 @@ Class Endpoint
         return $this.FormatResponse( $response, $options)
     }
 
-    [PSObject] Save($entity) { return ($this.Save(@{})) }
+    [PSObject] Save($entity) { return ($this.Save($entity, @{})) }
     [PSObject] Save($entity, $options)
     {
         $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
         $entity.SetDirty($false);
-        return return $this.FormatResponse( $response, $options)
+        return $this.FormatResponse( $response, $options)
     }
 
 }

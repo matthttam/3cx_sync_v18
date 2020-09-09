@@ -84,7 +84,7 @@ if(-NOT $NoExtensions){
     # Extract New and Update extension mappings
     $NewMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.New)
     $UpdateMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.Update)
-    $ExtensionNumberHeader = $MappingConfig.Config.Extension.Number
+    $ExtensionKeyHeader = $MappingConfig.Config.Extension.Key
     ## Import Extension CSV File
     try
     {
@@ -121,8 +121,8 @@ if(-NOT $NoExtensions){
     # Loop over CSV
     foreach ($row in $ExtensionImportCSV.Config) {
         # If the row's CSVNumberHeader does exist in the extentions list, Update
-        if($row.$ExtensionNumberHeader -in $Extensions.object.number){
-            $CurrentExtensionNumber = $row.$ExtensionNumberHeader
+        $CurrentExtensionNumber = $row.$ExtensionKeyHeader
+        if($CurrentExtensionNumber -in $Extensions.object.number){
             if($NoUpdateExtensions -eq $false){
                 try{
                     $CurrentExtension = $ExtensionFactory.makeExtension( $ExtensionsNumberToID[$CurrentExtensionNumber] )
@@ -185,7 +185,7 @@ if(-NOT $NoExtensions){
 
                 foreach( $CSVHeader in $NewMappingCSVKeys)
                 {
-                    $NewExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
+                    $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
                     $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
 
@@ -246,7 +246,7 @@ if(-NOT $NoGroupMemberships){
                 # Create the group object (calls set)
                 $CurrentGroup = $GroupFactory.makeGroup($Group.Id);
             }catch{
-                Write-PSFMessage -Level Critical -Message ("Failed to Look Up Group '{0}' due to an unexpected error." -f ($Group.object.Name))
+                Write-PSFMessage -Level Critical -Message ("Failed to Look Up Group '{0}' due to an unexpected error." -f ($Group.Name))
                 continue
             }
             # Currently Selected Extensions that will be widdled down as we find them in the CSV
@@ -312,7 +312,7 @@ if(-NOT $NoGroupMemberships){
                 {
                     #Stage Removing Members, continue on error
                     try{
-                        $CurrentGroup.RemoveMembers($ExtensionsToAdd);
+                        $CurrentGroup.RemoveMembers($ExtensionsToRemove);
                     }catch{
                         continue
                     }
@@ -374,10 +374,10 @@ if( -NOT $NoHotdesking){
     $HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
     
     # Marshal the Hotdesking List into Hotdesking objects.
-    #$Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
+    $Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
 
     # Get all Macs from the listed hotdeskings
-    #$HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
+    $HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
 
     $HotdeskingMacs = $HotdeskingList | Select-Object -ExpandProperty ($NewMapping.GetCSVHeader('MacAddress'))
     foreach( $row in $HotdeskingImportCSV.Config )
@@ -386,18 +386,6 @@ if( -NOT $NoHotdesking){
         if($NewMapping.ExtractValueByAPIPath('MacAddress', $row) -in $HotdeskingMacs)
         {
             continue;
-            <#
-            if( $NoUpdateHotdesking -eq $false ){
-                try{
-                    # Use Mac Address to find Hotdeskings 
-                    #$CurrentExtension = $ExtensionFactory.makeExtension($row.$CSVNumberHeader)
-                } catch {
-                    
-                    Write-PSFMessage -Level Critical -Message ("Failed to Look Up Extension '{0}' due to an unexpected error. {1}" -f ($row.$CSVNumberHeader, $PSItem.Exception.Message))
-                    continue
-                }
-            }
-            #>
         }else{
         # Create Hotdesks
             $HotdeskingCreationInfo = @{ 
