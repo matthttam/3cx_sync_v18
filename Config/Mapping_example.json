@@ -2,9 +2,9 @@
     "Extension": 
     {
         "Path": "Import Files/3CX_Extensions.csv",
+        "Key":  "Number",
         "New": 
 				{
-						"Number":  "Number",
 						"FirstName":  "FirstName",
 						"LastName":  "LastName",
 						"Email":  "Email",

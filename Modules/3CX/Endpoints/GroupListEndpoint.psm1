@@ -8,14 +8,79 @@ Class GroupListEndpoint : Endpoint
         $this.SetEndpointPath('GroupList')
     }
 
-    [PSObject] Update($payload)
+    [PSObject] QueryPossibleValues($group, $state)
     {
-        return $this.APIConnection.post('edit/update', @{'Body' = ($payload | ConvertTo-Json -Depth 10)} )
+        $payload = @{
+            "Path" = @{
+                "ObjectId" = $group.Id
+                "PropertyPath" = @(@{"Name" = "Members"})
+            }
+            "State" = $state
+            "Count" = "100" # Incrase number of results returned per query
+        }
+        $PossibleValues = [System.Collections.ArrayList] @()
+
+        #Cycle through pagination
+        Do{
+            #$response = $this.QueryPossibleValues($group, $state)
+            $response = $this.ReadProperty($payload)
+            $PossibleValues += $response.PossibleValues
+            $State.start += $payload.Count#$group.object.Members.itemsByPage
+        }while( $State.start -lt $response.count )
+        return $PossibleValues
+
+        #return $this.ReadProperty($payload)
     }
 
-    [PSObject] Save($group)
+    [PSObject] QueryMembers( $group, $state )
     {
-        return $this.APIConnection.post('edit/save', @{'Body' = ($group.Id | ConvertTo-Json )})
+        $payload = @{
+            "Path" = @{
+                "ObjectId" = $group.Id
+                "PropertyPath" = @(@{"Name" = "Members"})
+            }
+            "PropertyValue" = @{"State" = $state}
+        }
+        $Members = [System.Collections.ArrayList] @()
+        Do{
+            $response = $this.Update($payload)
+            $Members += ($response | Select-Object -ExpandProperty Item).Members.Selected
+            $State.start += $group.object.Members.itemsByPage
+        }while( $State.start -lt $group.object.Members.count )
+        
+        return $Members
     }
 
+    [PSObject] RemoveMembers( $group, $members )
+    {
+        $payload = $this.GetPayloadBody()
+        $payload.Path.ObjectId = $group.Id
+        $payload.Path.PropertyPath += @{"Name" = "Members"}
+        $payload.PropertyValue = @{"Delete" = @{"Ids" = @($members.Id); "IsAllSelected" = $false; "Search" = ""}}
+        $response = $this.Update($payload)
+        $group.SetDirty($true)
+        return $response 
+    }
+
+    [PSObject] AddMembers( $group, $members )
+    {
+        $payload = $this.GetPayloadBody()
+        $payload.Path.ObjectId = $group.Id
+        $payload.Path.PropertyPath += @{"Name" = "Members"}
+        $payload.PropertyValue = @{"Add" = @{"Ids" = @($members.Id); "IsAllSelected" = $false; "Search" = ""}}
+        $response = $this.Update($payload)
+        $group.SetDirty($true)
+        return $response 
+    }
+
+    [Hashtable] GetPayloadBody()
+    {
+        return @{
+            "Path" = @{
+                "ObjectId" = ""
+                "PropertyPath" = @()
+            }
+            "PropertyValue" = @{}
+        }
+    }
 }

@@ -1,6 +1,7 @@
 Using module ..\Config.psm1
 Using module .\Endpoints\ExtensionListEndpoint.psm1
 Using module .\Endpoints\GroupListEndpoint.psm1
+Using module .\Endpoints\HotdeskingListEndpoint.psm1
 
 class APIConnection
 {
@@ -23,6 +24,7 @@ class APIConnection
 
         $this.Endpoints.ExtensionListEndpoint = [ExtensionListEndpoint]::New($this)
         $this.Endpoints.GroupListEndpoint = [GroupListEndpoint]::New($this)
+        $this.Endpoints.HotdeskingListEndpoint = [HotdeskingListEndpoint]::New($this)
     }
 
     Login()
@@ -33,11 +35,8 @@ class APIConnection
             Write-Error 'Failed to authenticate' -ErrorAction Stop
             throw [System.Security.Authentication.InvalidCredentialException]::new("Failed to authenticate")
         }
-        $Cookies = $this.Session.Cookies.GetCookies('{0}/login' -f $this.BaseUrl)
-        $XSRF = ($Cookies | Where-Object  name -eq "XSRF-TOKEN").Value
         $this.ConnectionSettings = @{
             WebSession = $this.Session
-            Headers = @{"x-xsrf-token"="$XSRF"}
             ContentType = "application/json;charset=UTF-8"
         }
     }

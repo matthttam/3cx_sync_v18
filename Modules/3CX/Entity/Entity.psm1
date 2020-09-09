@@ -1,11 +1,12 @@
 Using module ..\Endpoints\Endpoint.psm1
+Using module ..\ValueType.psm1
 
 Class Entity
 {
     [Endpoint] $_endpoint
-    [int64] $Id
-    $object = @{}
-    
+    [string] $Id
+    [boolean] $Dirty = $false
+    $object
 
     Entity($object, $endpoint)
     {
@@ -22,8 +23,7 @@ Class Entity
     # Return appropriate selected values based on type
     [PSObject] GetObjectValue( $attributeInfo )
     {
-        #$attributeInfo = $this.GetObjectAttributeInfo($MappingParsedConfig.Values)
-        if($attributeInfo.Type -in ('Enum', 'File', 'ItemSet')){
+        if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
             return $attributeInfo.selected
         }else{
             return $attributeInfo._value
@@ -33,18 +33,23 @@ Class Entity
     # Return attributeInfo of a path from the object
     [PSObject] GetObjectAttributeInfo($key)
     {
+        return $this.GetObjectAttributeInfo($key, $this.object)
+    }
+    [PSObject] GetObjectAttributeInfo($key, $object)
+    {
         if( $key -is [string] ){
-            $p1,$p2 = $key.Split(".")
+            #$p1,$p2 = $key.Split(".")
+            $p1, $p2 = $key.Split(".", 2)
         }elseif( $key -is [array] ){
             $p1, $p2 = $key
         }else{
             return $false
         }
-        if($p2) {
-            return $this.GetObjectAttributeInfo($this.object.$p1, $p2)
+        if( $object.$p1.type -eq [ValueType]::Collection ) {
+                return $this.GetObjectAttributeInfo($p2, $object.$p1._value)
         }
         else {
-            return $this.object.$p1
+            return $object.$p1
         }
     }
 
@@ -58,6 +63,19 @@ Class Entity
             "PropertyValue" = $CSVDataValue
         }
         return $payload
+    }
+
+    SetDirty([boolean] $value)
+    {
+        $this.Dirty = $value
+    }
+    [boolean] GetDirty()
+    {
+        return $this.Dirty
+    }
+    [boolean] IsDirty()
+    {
+        return ($this.GetDirty() -eq $true)
     }
 
 }

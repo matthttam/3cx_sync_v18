@@ -1,7 +1,10 @@
+Using module ..\ValueType.psm1
+
 Class Endpoint
 {
     $APIConnection
     $EndpointPath
+    $LastSetID
 
     Endpoint($APIConnection)
     {
@@ -31,10 +34,14 @@ Class Endpoint
     }
 
 
-    [PSObject] New() { return ($this.New(@{})) }
+    [PSObject] New() 
+    { 
+        return ($this.New(@{})) 
+    }
     [PSObject] New($options)
     {
-        $response =  $this.APIConnection.post($this.GetEndpointPath('new'))
+        $payload = @{"Param" = @{}}
+        $response =  $this.APIConnection.post($this.GetEndpointPath('new'), @{'Body' = ($payload | ConvertTo-Json )})
         return $this.FormatResponse( $response, $options)
     }
 
@@ -51,4 +58,26 @@ Class Endpoint
         $response = $this.APIConnection.get($this.GetEndpointPath())
         return $this.FormatResponse( $response, $options)
     }
+
+    [PSObject] Update($payload){ return ($this.Update($payload, @{})) }
+    [PSObject] Update($payload, $options)
+    {
+        $response = $this.APIConnection.post('edit/update', @{'Body' = ($payload | ConvertTo-Json -Depth 10)} )
+        return $this.FormatResponse( $response, $options)
+    }
+
+    [PSObject] ReadProperty($payload){ return ($this.ReadProperty($payload, @{})) }
+    [PSObject] ReadProperty($payload, $options){
+        $response = $this.APIConnection.post('edit/readProperty', @{'Body' = ($payload | ConvertTo-Json -Depth 10 )})
+        return $this.FormatResponse( $response, $options)
+    }
+
+    [PSObject] Save($entity) { return ($this.Save($entity, @{})) }
+    [PSObject] Save($entity, $options)
+    {
+        $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
+        $entity.SetDirty($false);
+        return $this.FormatResponse( $response, $options)
+    }
+
 }
