@@ -185,7 +185,7 @@ if(-NOT $NoExtensions){
 
                 foreach( $CSVHeader in $NewMappingCSVKeys)
                 {
-                    $NewExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
+                    $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
                     $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
 
