@@ -84,7 +84,7 @@ if(-NOT $NoExtensions){
     # Extract New and Update extension mappings
     $NewMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.New)
     $UpdateMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.Update)
-    $ExtensionNumberHeader = $MappingConfig.Config.Extension.Number
+    $ExtensionKeyHeader = $MappingConfig.Config.Extension.Key
     ## Import Extension CSV File
     try
     {
@@ -121,7 +121,7 @@ if(-NOT $NoExtensions){
     # Loop over CSV
     foreach ($row in $ExtensionImportCSV.Config) {
         # If the row's CSVNumberHeader does exist in the extentions list, Update
-        $CurrentExtensionNumber = $row.$ExtensionNumberHeader
+        $CurrentExtensionNumber = $row.$ExtensionKeyHeader
         if($CurrentExtensionNumber -in $Extensions.object.number){
             if($NoUpdateExtensions -eq $false){
                 try{
