@@ -35,7 +35,6 @@ class APIConnection
             Write-Error 'Failed to authenticate' -ErrorAction Stop
             throw [System.Security.Authentication.InvalidCredentialException]::new("Failed to authenticate")
         }
-
         $this.ConnectionSettings = @{
             WebSession = $this.Session
             ContentType = "application/json;charset=UTF-8"
