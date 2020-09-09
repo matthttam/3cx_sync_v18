@@ -71,7 +71,7 @@ Class Endpoint
         return $this.FormatResponse( $response, $options)
     }
 
-    [PSObject] Save($entity) { return ($this.Save(@{})) }
+    [PSObject] Save($entity) { return ($this.Save($entity, @{})) }
     [PSObject] Save($entity, $options)
     {
         $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
