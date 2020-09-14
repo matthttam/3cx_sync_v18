@@ -1,8 +1,14 @@
-﻿Using module .\Modules\Config.psm1
-Using module .\Modules\ExtensionMapping.psm1
-Using module .\Modules\GroupMembershipMapping.psm1
-Using module .\Modules\HotdeskingMapping.psm1
-Using module .\Modules\3CX\APIConnection.psm1
+﻿Using module .\Modules\3CX\APIConnection.psm1
+
+Using module .\Modules\CSV\CSV.psm1
+
+Using module .\Modules\Config\ConnectionConfig.psm1
+Using module .\Modules\Config\ExtensionConfig.psm1
+
+#Using module .\Modules\Mapping\ExtensionMapping.psm1
+Using module .\Modules\Mapping\GroupMembershipMapping.psm1
+Using module .\Modules\Mapping\HotdeskingMapping.psm1
+
 Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
 Using module .\Modules\3CX\Factory\GroupFactory.psm1
 Using module .\Modules\3CX\Entity\HotdeskingFactory.psm1
@@ -40,38 +46,17 @@ Set-PSFLoggingProvider -Name logfile -FilePath $logFile -Enabled $true;
 Write-PSFMessage -Level Output -Message 'Sync Started'
 
 ## Import Config config.json
-try
-{
-    $ConfigPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'config.json')
-    $config = [Config]::new($ConfigPath)
-    $config.verify(@('BaseUrl','Password','Username'))
-}
-catch [System.IO.FileNotFoundException]
-{
-    $response = Read-Host 'Run Setup script now? [Yn]'
-    if($response -eq '' -or $response.ToLower() -eq 'y'){
-        & "$dir\Setup.ps1"
-    }else{
-        Write-Error 'Exitting. config is required to run this sync.' -ErrorAction Stop
-    }
-}
-catch
-{
-    Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
-}
+$ConfigPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'config.json')
+$config = [ConnectionConfig]::new($ConfigPath)
 
-## Import Config\Mapping.json
-try
-{
-    $MappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'Mapping.json')
-    $MappingConfig = [Config]::new($MappingPath);
-}
-catch
-{
-    Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
-}
+## Import Config\Mapping.json > Extension
+$MappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'Mapping.json')
+$ExtensionConfig = [ExtensionConfig]::New($MappingPath)
 
+## Create API Connection Object
 $3CXApiConnection = [APIConnection]::New($config)
+
+# Sign In
 try{
     $3CXApiConnection.login()
 }catch{
@@ -80,17 +65,17 @@ try{
 
 
 if(-NOT $NoExtensions){
-
-    # Extract New and Update extension mappings
-    $NewMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.New)
-    $UpdateMapping = [ExtensionMapping]::New($MappingConfig.Config.Extension.Update)
-    $ExtensionKeyHeader = $MappingConfig.Config.Extension.Key
+    $NewMapping = $ExtensionConfig.ExtensionMapping.New
+    $UpdateMapping = $ExtensionConfig.ExtensionMapping.Update
+    $ExtensionKeyHeader = $ExtensionConfig.GetKey()
+ 
     ## Import Extension CSV File
     try
     {
-        $ExtensionImportCSV = [Config]::New($MappingConfig.Config.Extension.Path, [Config]::CSV)
+        $ExtensionImportCSV = [CSV]::New($ExtensionConfig.GetCSVPath())
+        
         #Verify ImportData isn't Empty
-        if(-not $ExtensionImportCSV.Config.Count -gt 0){
+        if(-not $ExtensionImportCSV.Data.Count -gt 0){
             Write-Error 'Import File is Empty' -ErrorAction Stop
         }
     }
@@ -115,11 +100,11 @@ if(-NOT $NoExtensions){
         $ExtensionsNumberToID.Add($Extension.object.number, $Extension.id)
     }
 
-    $UpdateMappingCSVKeys = $UpdateMapping.GetConfigCSVKeys()
-    $NewMappingCSVKeys = $NewMapping.GetConfigCSVKeys()
+    $UpdateMappingCSVKeys = $UpdateMapping.GetMappingCSVKeys()
+    $NewMappingCSVKeys = $NewMapping.GetMappingCSVKeys()
 
     # Loop over CSV
-    foreach ($row in $ExtensionImportCSV.Config) {
+    foreach ($row in $ExtensionImportCSV.Data) {
         # If the row's CSVNumberHeader does exist in the extentions list, Update
         $CurrentExtensionNumber = $row.$ExtensionKeyHeader
         if($CurrentExtensionNumber -in $Extensions.object.number){
@@ -135,13 +120,13 @@ if(-NOT $NoExtensions){
                 $UpdateRequired = $false
                 foreach($CSVHeader in $UpdateMappingCSVKeys)
                 {
-                    $CurrentExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($UpdateMapping.GetParsedConfigValues($CSVHeader))
+                    $CurrentExtensionValueAttributeInfo = $CurrentExtension.GetObjectAttributeInfo($UpdateMapping.GetParsedMappingValues($CSVHeader))
                     $CurrentExtensionValue = $CurrentExtension.GetObjectValue($CurrentExtensionValueAttributeInfo)
                     $CSVValue = $UpdateMapping.ConvertToType( $row.$CSVHeader, $CurrentExtensionValueAttributeInfo )
                     if( $CurrentExtensionValue -ne $CSVValue)
                     {
                         $UpdateRequired = $true
-                        $payload = $CurrentExtension.GetUpdatePayload($UpdateMapping.GetParsedConfig($CSVHeader), $CSVValue)
+                        $payload = $CurrentExtension.GetUpdatePayload($UpdateMapping.GetParsedMappingKey($CSVHeader), $CSVValue)
                         $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue))
                         try{
                             if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
@@ -185,9 +170,9 @@ if(-NOT $NoExtensions){
 
                 foreach( $CSVHeader in $NewMappingCSVKeys)
                 {
-                    $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetParsedConfigValues($CSVHeader))
+                    $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetParsedMappingValues($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
-                    $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedConfig($CSVHeader) , $CSVValue)
+                    $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedMappingKey($CSVHeader) , $CSVValue)
 
                     $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
                     try {
@@ -288,24 +273,29 @@ if(-NOT $NoGroupMemberships){
             # If there are extensions to add
             if($ExtensionsToAdd.count -gt 0)
             {
-                # Stage Adding Members
-                # If WhatIf isn't set
-                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
-                {
-                    #Stage Adding Members, continue on error
-                    try{
-                        $CurrentGroup.AddMembers($ExtensionsToAdd);
-                    }catch{
-                        continue
+                #if threhold is false or isOverThreshold is true
+                #{
+                    # Stage Adding Members
+                    # If WhatIf isn't set
+                    if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
+                    {
+                        #Stage Adding Members, continue on error
+                        try{
+                            $CurrentGroup.AddMembers($ExtensionsToAdd);
+                        }catch{
+                            continue
+                        }
+                    }else{
+                        $CurrentGroup.SetDirty($true);
                     }
-                }else{
-                    $CurrentGroup.SetDirty($true);
-                }
+                #}
             }
 
             # If there are extensions to remove
             if($ExtensionsToRemove.count -gt 0)
             {
+                # If Remove threshold has been met
+                $MappingConfig.config.Extension.threshold
                 # Stage Removing Members
                 # If WhatIf isn't set
                 if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetRemoveMembersMessage($ExtensionsToRemove)))
@@ -401,7 +391,7 @@ if( -NOT $NoHotdesking){
             }
             
             # Loop over values that need to be set
-            foreach( $CSVHeader in $NewMapping.GetConfigCSVKeys())
+            foreach( $CSVHeader in $NewMapping.GetMappingCSVKeys())
                 {
                     if($NewMapping.GetApiPath($CSVHeader) -in $HotdeskingCreationInfo.Keys )
                     {

@@ -2,6 +2,11 @@
     "Extension": 
     {
         "Path": "Import Files/3CX_Extensions.csv",
+        "Threshold": 
+                    {
+                        "Add":false,
+                        "Remove": "20%"
+                    },
         "Key":  "Number",
         "New": 
 				{

@@ -1,44 +1,31 @@
-Using module .\Config.psm1
-Using module .\3CX\ValueType.psm1
+Using module ..\Config\Config.psm1
+Using module ..\3CX\ValueType.psm1
 
 class Mapping
 {
     # Hashtable mapping CSV Headers to an array of Objects containing API Names
-    [hashtable]$ParsedConfig = @{}
-    [PSCustomObject] $config
-
-    Mapping([PSCustomObject] $config)
-    {
-        $this.config = $config
-    }
+    [PSCustomObject] $mapping
     
-    #??? I'm so confused by this function actually
-    [PSCustomObject] GetParsedConfig($CSVHeaderValue) #Deprecated
+
+    Mapping([PSCustomObject] $mapping)
     {
-        return $this.ParsedConfig.$CSVHeaderValue
+        $this.SetMapping($mapping)
     }
 
-    [array] GetParsedConfigValues($CSVHeaderValue) #Deprecated
-    {
-        return @($this.GetParsedConfig($CSVHeaderValue).values)
+    <# Sets/Gets mapping object #>
+    [void] SetMapping($mapping){
+        $this.mapping = $mapping
     }
-
-    [array] GetConfigPathKeys() #Deprecated
-    {
-        return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Name')
+    [PSCustomObject] GetMapping(){
+        return $this.mapping
     }
 
     [array] GetCSVHeaders(){
-        return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Value')
-    }
-    [array] GetConfigCSVKeys() #Deprecated
-    {
-        return @($this.config.PSObject.Properties | Select-Object -ExpandProperty 'Value')
+        return @($this.mapping.PSObject.Properties | Select-Object -ExpandProperty 'Value')
     }
 
     [PSObject] ConvertToType( $Value, $attributeInfo )
     {
-        
         if($attributeInfo.Type -eq [ValueType]::String  ){ 
             return $Value
         }elseif($attributeInfo.Type -eq [ValueType]::Enum ){ 
@@ -75,14 +62,11 @@ class Mapping
     [String] ExtractValueByCSVHeader( [String] $CSVHeader, [PSCustomObject]  $row )
     {
         return $row.$CSVHeader;
-        #$ApiPath = $this.GetAPIPath($CSVHeader);
-        #return $this.ExtractValueByAPIPath( $ApiPath, $row )
     }
 
     [String] GetCSVHeader( $ApiPath )
     {
         return $this.config.$ApiPath;
     }
-
 
 }

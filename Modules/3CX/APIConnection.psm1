@@ -1,4 +1,4 @@
-Using module ..\Config.psm1
+Using module ..\Config\Config.psm1
 Using module .\Endpoints\ExtensionListEndpoint.psm1
 Using module .\Endpoints\GroupListEndpoint.psm1
 Using module .\Endpoints\HotdeskingListEndpoint.psm1
