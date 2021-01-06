@@ -273,22 +273,19 @@ if(-NOT $NoGroupMemberships){
             # If there are extensions to add
             if($ExtensionsToAdd.count -gt 0)
             {
-                #if threhold is false or isOverThreshold is true
-                #{
-                    # Stage Adding Members
-                    # If WhatIf isn't set
-                    if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
-                    {
-                        #Stage Adding Members, continue on error
-                        try{
-                            $CurrentGroup.AddMembers($ExtensionsToAdd);
-                        }catch{
-                            continue
-                        }
-                    }else{
-                        $CurrentGroup.SetDirty($true);
+                # Stage Adding Members
+                # If WhatIf isn't set
+                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
+                {
+                    #Stage Adding Members, continue on error
+                    try{
+                        $CurrentGroup.AddMembers($ExtensionsToAdd);
+                    }catch{
+                        continue
                     }
-                #}
+                }else{
+                    $CurrentGroup.SetDirty($true);
+                }
             }
 
             # If there are extensions to remove
