@@ -1,14 +1,16 @@
+Using module ..\APIConnection.psm1
+Using module .\EntityFactory.psm1
 Using module ..\Endpoints\HotdeskingListEndpoint.psm1
-Using module .\Hotdesking.psm1
+Using module ..\Entity\Hotdesking.psm1
 
-Class HotdeskingFactory
+Class HotdeskingFactory : EntityFactory
 {
     Static [Hotdesking[]] $Hotdeskings
     [HotdeskingListEndpoint] $_endpoint
+    $EndpointName = 'HotdeskingListEndpoint'
 
-    HotdeskingFactory([HotdeskingListEndpoint] $endpoint)
-    {
-        $this._endpoint = $endpoint
+    HotdeskingFactory([APIConnection] $Connection) : base( $Connection ){
+
     }
 
     #Create an instance of a single Hotdesking

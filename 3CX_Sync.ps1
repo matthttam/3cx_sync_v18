@@ -5,13 +5,12 @@ Using module .\Modules\CSV\CSV.psm1
 Using module .\Modules\Config\ConnectionConfig.psm1
 Using module .\Modules\Config\ExtensionConfig.psm1
 
-#Using module .\Modules\Mapping\ExtensionMapping.psm1
 Using module .\Modules\Mapping\GroupMembershipMapping.psm1
 Using module .\Modules\Mapping\HotdeskingMapping.psm1
 
-Using module .\Modules\3CX\Entity\ExtensionFactory.psm1
+Using module .\Modules\3CX\Factory\ExtensionFactory.psm1
 Using module .\Modules\3CX\Factory\GroupFactory.psm1
-Using module .\Modules\3CX\Entity\HotdeskingFactory.psm1
+Using module .\Modules\3CX\Factory\HotdeskingFactory.psm1
 
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -63,7 +62,6 @@ try{
     Write-Error 'Failed to connect to the 3CX Api with the provided config information.' -ErrorAction Stop
 }
 
-
 if(-NOT $NoExtensions){
     $NewMapping = $ExtensionConfig.ExtensionMapping.New
     $UpdateMapping = $ExtensionConfig.ExtensionMapping.Update
@@ -91,7 +89,7 @@ if(-NOT $NoExtensions){
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
     
-    $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection.Endpoints.ExtensionListEndpoint)
+    $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection)
     $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
     
     #Build Lookup Table for finding the ID based on number

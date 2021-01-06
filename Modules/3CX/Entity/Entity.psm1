@@ -4,13 +4,13 @@ Using module ..\ValueType.psm1
 Class Entity
 {
     [Endpoint] $_endpoint
-    [string] $Id
+    [string] $id
     [boolean] $Dirty = $false
     $object
 
     Entity($object, $endpoint)
     {
-        $this.Id = $object.Id
+        $this.id = $object.id
         $this._endpoint = $endpoint
         if($object.ActiveObject){
             $this.object = $object.ActiveObject
@@ -57,7 +57,7 @@ Class Entity
     [hashtable] GetUpdatePayload( $PropertyPath, $CSVDataValue ){
         $payload = @{
             "Path" = @{
-                "ObjectId" = $this.Id
+                "ObjectId" = $this.id
                 "PropertyPath" = $PropertyPath #$Mapping.ParsedConfig.$CSVHeader
             }
             "PropertyValue" = $CSVDataValue

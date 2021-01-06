@@ -1,14 +1,16 @@
+Using module ..\APIConnection.psm1
+Using module .\EntityFactory.psm1
 Using module ..\Endpoints\ExtensionListEndpoint.psm1
-Using module .\Extension.psm1
+Using module ..\Entity\Extension.psm1
 
-Class ExtensionFactory
+Class ExtensionFactory : EntityFactory
 {
     Static [Extension[]] $Extensions
     [ExtensionListEndpoint] $_endpoint
+    $EndpointName = 'ExtensionListEndpoint'
 
-    ExtensionFactory([ExtensionListEndpoint] $endpoint)
-    {
-        $this._endpoint = $endpoint
+    ExtensionFactory([APIConnection] $Connection) : base( $Connection ){
+
     }
 
     #Create an instance of a single extension

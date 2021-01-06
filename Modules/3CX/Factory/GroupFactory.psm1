@@ -1,3 +1,4 @@
+Using module ..\APIConnection.psm1
 Using module .\EntityFactory.psm1
 Using module ..\Endpoints\GroupListEndpoint.psm1
 Using module ..\Entity\Group.psm1
@@ -6,13 +7,12 @@ Class GroupFactory : EntityFactory
 {
     Static [Group[]] $Groups
     [GroupListEndpoint] $_endpoint
+    $EndpointName = 'GroupListEndpoint'
 
-    GroupFactory([GroupListEndpoint] $endpoint)
-    {
-        $this._endpoint = $endpoint
+    GroupFactory([APIConnection] $Connection) : base( $Connection ){
+
     }
-
-    #Create an instance of a single group
+   
     [Group] makeGroup([PSObject] $object)
     {
         return [Group]::new($object, $this._endpoint)
