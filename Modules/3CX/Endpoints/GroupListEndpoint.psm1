@@ -16,20 +16,17 @@ Class GroupListEndpoint : Endpoint
                 "PropertyPath" = @(@{"Name" = "Members"})
             }
             "State" = $state
-            "Count" = "100" # Incrase number of results returned per query
+            "Count" = "100" # Incrases number of results returned per query
         }
         $PossibleValues = [System.Collections.ArrayList] @()
 
         #Cycle through pagination
         Do{
-            #$response = $this.QueryPossibleValues($group, $state)
             $response = $this.ReadProperty($payload)
             $PossibleValues += $response.PossibleValues
-            $State.start += $payload.Count#$group.object.Members.itemsByPage
+            $State.start += $payload.Count
         }while( $State.start -lt $response.count )
         return $PossibleValues
-
-        #return $this.ReadProperty($payload)
     }
 
     [PSObject] QueryMembers( $group, $state )
