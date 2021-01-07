@@ -220,7 +220,7 @@ if(-NOT $NoGroupMemberships){
         
     # Get Groups
     $GroupList = $3CXApiConnection.Endpoints.GroupListEndpoint.Get() | Select-Object -ExpandProperty 'list'
-    $GroupFactory = [GroupFactory]::new($3CXApiConnection.Endpoints.GroupListEndpoint)
+    $GroupFactory = [GroupFactory]::new($3CXApiConnection)
     $GroupMembershipMappingNames = $GroupMembershipMapping.GetConfigPathKeys()
     foreach( $Group in $GroupList ){
         # If this group is in the mapping file for membership management
@@ -345,18 +345,15 @@ if( -NOT $NoHotdesking){
         Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
-    # Save HotdeskingListEndpoint to a variable
-    $HotdeskingEndpoint = $3CXApiConnection.Endpoints.HotdeskingListEndpoint;
-    
     # Get A List of Hotdeskings from 3CX
     try{
-        $HotdeskingList = $HotdeskingEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $HotdeskingList = $3CXApiConnection.Endpoints.HotdeskingListEndpoint.Get() | Select-Object -ExpandProperty 'list'
     }catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
     # Create Hotdesking Factory
-    $HotdeskingFactory = [HotdeskingFactory]::new($HotdeskingEndpoint)
+    $HotdeskingFactory = [HotdeskingFactory]::new($3CXApiConnection)
     
     # Marshal the Hotdesking List into Hotdesking objects.
     $Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
