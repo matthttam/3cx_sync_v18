@@ -7,9 +7,6 @@ Using module .\Modules\Config\ExtensionConfig.psm1
 Using module .\Modules\Config\GroupMembershipConfig.psm1
 Using module .\Modules\Config\HotdeskingConfig.psm1
 
-Using module .\Modules\Mapping\GroupMembershipMapping.psm1
-Using module .\Modules\Mapping\HotdeskingMapping.psm1
-
 Using module .\Modules\3CX\Factory\ExtensionFactory.psm1
 Using module .\Modules\3CX\Factory\GroupFactory.psm1
 Using module .\Modules\3CX\Factory\HotdeskingFactory.psm1
@@ -258,8 +255,7 @@ if(-NOT $NoGroupMemberships){
             foreach( $row in $GroupMembershipImportCSV.Config ){
                 # Determine Proper Extensions in Group
                 if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.config.($Group.Name).Conditions, $row) ){
-                    # Null COALESCE for Powershell v5. Find                     
-                    #$FoundSelected = ( ($CurrentGroup.GetSelected() | Where-Object -FilterScript {$_.Number._value -eq (""+$row.Number)}), $false -ne $null)[0]
+                    # True or false based on if the row exists
                     $FoundSelected = ( ($CurrentGroup.GetSelectedByNumber($row.Number) ), $false -ne $null)[0]
 
                     # If this Number is Selected Already
