@@ -4,6 +4,8 @@ Using module .\Modules\CSV\CSV.psm1
 
 Using module .\Modules\Config\ConnectionConfig.psm1
 Using module .\Modules\Config\ExtensionConfig.psm1
+Using module .\Modules\Config\GroupMembershipConfig.psm1
+Using module .\Modules\Config\HotdeskingConfig.psm1
 
 Using module .\Modules\Mapping\GroupMembershipMapping.psm1
 Using module .\Modules\Mapping\HotdeskingMapping.psm1
@@ -51,9 +53,13 @@ Write-PSFMessage -Level Output -Message 'Sync Started'
 $ConfigPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'config.json')
 $config = [ConnectionConfig]::new($ConfigPath)
 
-## Import Config\Mapping.json > Extension
+## Mapping Path
 $MappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'Mapping.json')
+
+## Import Config\Mapping.json > Extension, GrouopMembership, Hotdesking
 $ExtensionConfig = [ExtensionConfig]::New($MappingPath)
+$GroupMembershipConfig = [GroupMembershipConfig]::New($MappingPath)
+$HotdeskingConfig = [HotdeskingConfig]::New($MappingPath)
 
 ## Create API Connection Object
 $3CXApiConnection = [APIConnection]::New($config)
@@ -66,8 +72,8 @@ try{
 }
 
 if(-NOT $NoExtensions){
-    $NewMapping = $ExtensionConfig.ExtensionMapping.New
-    $UpdateMapping = $ExtensionConfig.ExtensionMapping.Update
+    $NewMapping = $ExtensionConfig.Mapping.New
+    $UpdateMapping = $ExtensionConfig.Mapping.Update
     $ExtensionKeyHeader = $ExtensionConfig.GetKey()
  
     ## Import Extension CSV File
@@ -209,9 +215,9 @@ if(-NOT $NoGroupMemberships){
     ## Import GroupMembership CSV File
     try
     {
-        $GroupMembershipImportCSV = [Config]::New($MappingConfig.Config.GroupMembership.Path, [Config]::CSV)
+        $GroupMembershipImportCSV = [CSV]::New($GroupMembershipConfig.GetCSVPath())
         #Verify ImportData isn't Empty
-        if(-not $GroupMembershipImportCSV.Config.Count -gt 0){
+        if(-not $GroupMembershipImportCSV.Data.Count -gt 0){
             Write-Error 'Import File is Empty' -ErrorAction Stop
         }
     }
@@ -221,7 +227,7 @@ if(-NOT $NoGroupMemberships){
     }
 
     # Get GroupMembershipMapping
-    $GroupMembershipMapping = [GroupMembershipMapping]::New($MappingConfig.Config.GroupMembership.Groups)
+    $GroupMembershipMapping = $GroupMembershipConfig.Mapping.Groups
         
     # Get Groups
     try{
@@ -232,7 +238,7 @@ if(-NOT $NoGroupMemberships){
     }
     
     $GroupFactory = [GroupFactory]::new($3CXApiConnection)
-    $GroupMembershipMappingNames = $GroupMembershipMapping.GetConfigPathKeys()
+    $GroupMembershipMappingNames = $GroupMembershipMapping.GetNames()
     foreach( $Group in $GroupList ){
         # If this group is in the mapping file for membership management
         if($Group.Name -in $GroupMembershipMappingNames){
@@ -339,15 +345,15 @@ if(-NOT $NoGroupMemberships){
 
 if( -NOT $NoHotdesking){
     # Extract New and Update Hotdesking Mappings
-    $NewMapping = [HotdeskingMapping]::New($MappingConfig.Config.Hotdesking.New)
-    $UpdateMapping = [HotdeskingMapping]::New($MappingConfig.Config.Hotdesking.Update)
+    $NewMapping = $HotdeskingConfig.Mapping.New
+    $UpdateMapping = $HotdeskingConfig.Mapping.Update
 
     ## Import Hotdesking CSV File
     try
     {
-        $HotdeskingImportCSV = [Config]::New($MappingConfig.Config.Hotdesking.Path, [Config]::CSV)
+        $HotdeskingImportCSV = [CSV]::New($HotdeskingConfig.GetCSVPath())
         #Verify ImportData isn't Empty
-        if(-not $HotdeskingImportCSV.Config.Count -gt 0){
+        if(-not $HotdeskingImportCSV.Data.Count -gt 0){
             Write-Error 'Import File is Empty' -ErrorAction Stop
         }
     }

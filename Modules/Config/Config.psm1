@@ -6,6 +6,7 @@ class Config
     [PSCustomObject]$Config
     [string] $ConfigNode = $null
     [array] $RequiredFields = $null
+    [string] $CSVPath
 
     Config( [string] $FullPath )
     {
@@ -19,6 +20,11 @@ class Config
         
         if($this.GetRequiredFields()){
             $this.VerifyRequiredFields($this.GetRequiredFields())
+        }
+        
+        # Set CSV Path
+        if( $this.config.CSVPath){
+            $this.SetCSVPath($this.config.CSVPath)
         }
     }
 
@@ -113,5 +119,15 @@ class Config
         }else{
             Write-Verbose('Verification of Required Fields of {0} {1} successful' -f $this.Filename, $NodeMessage)
         }
+    }
+
+    <# Sets/Gets CSVPath Settings #>
+    [void] SetCSVPath([string] $CSVPath)
+    {
+        $this.CSVPath = $CSVPath
+    }
+    [string] GetCSVPath()
+    {
+        return $this.CSVPath
     }
 }

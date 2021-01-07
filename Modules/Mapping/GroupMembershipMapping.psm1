@@ -10,6 +10,9 @@ class GroupMembershipMapping : Mapping
     {
     }
 
+    [array] GetNames(){
+        return $this.Mapping | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
+    }
     [boolean] EvaluateConditions([array]$Conditions, $row){
         if($Conditions -eq $null){
             throw 'Unable to evaluate null conditions'

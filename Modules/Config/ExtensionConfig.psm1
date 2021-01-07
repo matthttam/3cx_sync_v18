@@ -5,11 +5,11 @@ class ExtensionConfig : Config
 {
     # Name of Node From Config File to Store
     [string] $ConfigNode = 'Extension'
-    [hashtable] $ExtensionMapping = @{}
+    [hashtable] $Mapping = @{}
     [hashtable] $Threshold = @{ "Add" = "0"; "Remove" = "0"}
     [string] $Key
     [array] $RequiredFields = @('key', 'threshold')
-    [string] $CSVPath
+    
 
     ExtensionConfig( [string] $FullPath ) : base($FullPath){
         # Store Threshold Values
@@ -17,25 +17,14 @@ class ExtensionConfig : Config
         $this.SetThreshold("Remove", $this.config.Threshold.Remove)
 
         # Create Mappings for New and Update
-        $this.ExtensionMapping.New = [ExtensionMapping]::new($this.config.New)
-        $this.ExtensionMapping.Update = [ExtensionMapping]::new($this.config.Update)
+        $this.Mapping.New = [ExtensionMapping]::new($this.config.New)
+        $this.Mapping.Update = [ExtensionMapping]::new($this.config.Update)
 
         # Set Key
         $this.SetKey($this.config.Key)
-
-        # Set CSV Path
-        $this.SetCSVPath($this.config.CSVPath)
     }
 
-    <# Sets/Gets CSVPath Settings #>
-    [void] SetCSVPath([string] $CSVPath)
-    {
-        $this.CSVPath = $CSVPath
-    }
-    [string] GetCSVPath()
-    {
-        return $this.CSVPath
-    }
+
 
     <# Sets/Gets Key Settings #>
     [void] SetKey([string] $Key)

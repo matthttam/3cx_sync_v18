@@ -4,7 +4,7 @@ Using module ..\3CX\ValueType.psm1
 class Mapping
 {
     # Hashtable mapping CSV Headers to an array of Objects containing API Names
-    [PSCustomObject] $mapping
+    [PSCustomObject] $Mapping
     
 
     Mapping([PSCustomObject] $mapping)

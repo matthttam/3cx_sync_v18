@@ -45,12 +45,12 @@ class ExtensionMapping : Mapping
 
     [array] GetMappingPathKeys()
     {
-        return @($this.mapping.PSObject.Properties | Select-Object -ExpandProperty 'Name')
+        return @($this.Mapping.PSObject.Properties | Select-Object -ExpandProperty 'Name')
     }
 
     [array] GetMappingCSVKeys()
     {
-        return @($this.mapping.PSObject.Properties | Select-Object -ExpandProperty 'Value')
+        return @($this.Mapping.PSObject.Properties | Select-Object -ExpandProperty 'Value')
     }
 
 }

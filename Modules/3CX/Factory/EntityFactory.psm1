@@ -2,9 +2,9 @@ Using module ..\APIConnection.psm1
 Using module ..\Endpoints\Endpoint.psm1
 Using module ..\Entity\Entity.psm1
 
-Using module .\Modules\3CX\Endpoints\ExtensionListEndpoint.psm1
-Using module .\Modules\3CX\Endpoints\GroupListEndpoint.psm1
-Using module .\Modules\3CX\Endpoints\HotdeskingListEndpoint.psm1
+Using module ..\Endpoints\ExtensionListEndpoint.psm1
+Using module ..\Endpoints\GroupListEndpoint.psm1
+Using module ..\Endpoints\HotdeskingListEndpoint.psm1
 
 Class EntityFactory
 {
