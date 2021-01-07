@@ -12,6 +12,9 @@ Using module .\Modules\3CX\Factory\ExtensionFactory.psm1
 Using module .\Modules\3CX\Factory\GroupFactory.psm1
 Using module .\Modules\3CX\Factory\HotdeskingFactory.psm1
 
+Using module .\Modules\3CX\Endpoints\ExtensionListEndpoint.psm1
+Using module .\Modules\3CX\Endpoints\GroupListEndpoint.psm1
+Using module .\Modules\3CX\Endpoints\HotdeskingListEndpoint.psm1
 
 [CmdletBinding(SupportsShouldProcess)]
 Param(
@@ -82,9 +85,11 @@ if(-NOT $NoExtensions){
         Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
+    
     # Get A List of Extensions
     try{
-        $ExtensionList = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $ExtensionListEndpoint = [ExtensionListEndpoint]::new($3CXApiConnection)
+        $ExtensionList = $ExtensionListEndpoint.Get() | Select-Object -ExpandProperty 'list'
     } catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
@@ -219,7 +224,13 @@ if(-NOT $NoGroupMemberships){
     $GroupMembershipMapping = [GroupMembershipMapping]::New($MappingConfig.Config.GroupMembership.Groups)
         
     # Get Groups
-    $GroupList = $3CXApiConnection.Endpoints.GroupListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+    try{
+        $GroupListEndpoint = [GroupListEndpoint]::new($3CXApiConnection)
+        $GroupList = $GroupListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+    }catch {
+        Write-Error ('Failed to Look Up Group List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
+    }
+    
     $GroupFactory = [GroupFactory]::new($3CXApiConnection)
     $GroupMembershipMappingNames = $GroupMembershipMapping.GetConfigPathKeys()
     foreach( $Group in $GroupList ){
@@ -347,7 +358,8 @@ if( -NOT $NoHotdesking){
 
     # Get A List of Hotdeskings from 3CX
     try{
-        $HotdeskingList = $3CXApiConnection.Endpoints.HotdeskingListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $HotdeskingListEndpoint = [HotdeskingListEndpoint]::new($3CXApiConnection)
+        $HotdeskingList = $HotdeskingListEndpoint.Get() | Select-Object -ExpandProperty 'list'
     }catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
