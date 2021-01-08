@@ -20,7 +20,7 @@ Class HotdeskingFactory : EntityFactory
     }
 
     # Create Hotdesking objects from an array of Hotdesking objects
-    [Array] makeHotdesking([Array] $objects){
+    [Hotdesking[]] makeHotdesking([Array] $objects){
         $return = @()
         foreach($object in $objects)
         {
@@ -46,5 +46,12 @@ Class HotdeskingFactory : EntityFactory
     {
         $responseObject = $this._endpoint.New($mac, $model)
         return [Hotdesking]::new($responseObject, $this._endpoint)
+    }
+
+    #Get all hotdeskings and return them as an array of hotdesking
+    [Hotdesking[]] getHotdeskings()
+    {
+        $HotdeskingList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
+        return $this.makeHotdesking($HotdeskingList)
     }
 }

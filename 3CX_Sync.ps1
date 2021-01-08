@@ -11,10 +11,6 @@ Using module .\Modules\3CX\Factory\ExtensionFactory.psm1
 Using module .\Modules\3CX\Factory\GroupFactory.psm1
 Using module .\Modules\3CX\Factory\HotdeskingFactory.psm1
 
-Using module .\Modules\3CX\Endpoints\ExtensionListEndpoint.psm1
-Using module .\Modules\3CX\Endpoints\GroupListEndpoint.psm1
-Using module .\Modules\3CX\Endpoints\HotdeskingListEndpoint.psm1
-
 [CmdletBinding(SupportsShouldProcess)]
 Param(
     [Switch] $NoExtensions,         <# Do not create or update extensions#>
@@ -53,10 +49,8 @@ $config = [ConnectionConfig]::new($ConfigPath)
 ## Mapping Path
 $MappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'Mapping.json')
 
-## Import Config\Mapping.json > Extension, GrouopMembership, Hotdesking
-$ExtensionConfig = [ExtensionConfig]::New($MappingPath)
-$GroupMembershipConfig = [GroupMembershipConfig]::New($MappingPath)
-$HotdeskingConfig = [HotdeskingConfig]::New($MappingPath)
+
+
 
 ## Create API Connection Object
 $3CXApiConnection = [APIConnection]::New($config)
@@ -69,6 +63,9 @@ try{
 }
 
 if(-NOT $NoExtensions){
+    ## Import Config\Mapping.json > Extension
+    $ExtensionConfig = [ExtensionConfig]::New($MappingPath)
+
     $NewMapping = $ExtensionConfig.Mapping.New
     $UpdateMapping = $ExtensionConfig.Mapping.Update
     $ExtensionKeyHeader = $ExtensionConfig.GetKey()
@@ -88,17 +85,15 @@ if(-NOT $NoExtensions){
         Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
-    
+    # Initialize ExtensionFactory
+    $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection)
+
     # Get A List of Extensions
     try{
-        $ExtensionListEndpoint = [ExtensionListEndpoint]::new($3CXApiConnection)
-        $ExtensionList = $ExtensionListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $Extensions = $ExtensionFactory.getExtensions()
     } catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
-    
-    $ExtensionFactory = [ExtensionFactory]::new($3CXApiConnection)
-    $Extensions = $ExtensionFactory.makeExtension($ExtensionList)
     
     #Build Lookup Table for finding the ID based on number
     $ExtensionsNumberToID = @{}
@@ -122,7 +117,6 @@ if(-NOT $NoExtensions){
                     continue
                 }
                 
-
                 $UpdateRequired = $false
                 foreach($CSVHeader in $UpdateMappingCSVKeys)
                 {
@@ -132,12 +126,11 @@ if(-NOT $NoExtensions){
                     if( $CurrentExtensionValue -ne $CSVValue)
                     {
                         $UpdateRequired = $true
-                        $payload = $CurrentExtension.GetUpdatePayload($UpdateMapping.GetParsedMappingKey($CSVHeader), $CSVValue)
                         $message = ("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue))
                         try{
                             if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                             {
-                                $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
+                                $UpdateResponse = $CurrentExtension.Update($UpdateMapping.GetParsedMappingKey($CSVHeader), $CSVValue)
                                 Write-PSFMessage -Level Output -Message ($message)
                             }
                         }catch{
@@ -152,7 +145,7 @@ if(-NOT $NoExtensions){
                         $message = ("Updated Extension: '{0}'" -f $CurrentExtensionNumber)
                         if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                         {
-                            $response = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Save($CurrentExtension)
+                            $response = $CurrentExtension.save()
                             Write-PSFMessage -Level Output -Message ($message)
                         }
                         
@@ -178,13 +171,12 @@ if(-NOT $NoExtensions){
                 {
                     $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetParsedMappingValues($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
-                    $payload = $NewExtension.GetUpdatePayload( $NewMapping.GetParsedMappingKey($CSVHeader) , $CSVValue)
 
                     $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
                     try {
                         if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                         {
-                            $UpdateResponse = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Update($payload)
+                            $UpdateResponse = $NewExtension.Update($NewMapping.GetParsedMappingKey($CSVHeader) , $CSVValue)
                             Write-PSFMessage -Level Output -Message ($message)
                         }
                     } catch {
@@ -196,7 +188,7 @@ if(-NOT $NoExtensions){
                     $message = ("Created Extension: '{0}'" -f $CurrentExtensionNumber)
                     if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
                     {
-                        $response = $3CXApiConnection.Endpoints.ExtensionListEndpoint.Save($NewExtension)    
+                        $response = $NewExtension.save() 
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                 }
@@ -209,6 +201,10 @@ if(-NOT $NoExtensions){
 }
 
 if(-NOT $NoGroupMemberships){
+
+    ## Import Config\Mapping.json > GrouopMembership
+    $GroupMembershipConfig = [GroupMembershipConfig]::New($MappingPath)
+
     ## Import GroupMembership CSV File
     try
     {
@@ -225,16 +221,17 @@ if(-NOT $NoGroupMemberships){
 
     # Get GroupMembershipMapping
     $GroupMembershipMapping = $GroupMembershipConfig.Mapping.Groups
-        
+
+    # Initialize GroupFactory
+    $GroupFactory = [GroupFactory]::new($3CXApiConnection)
+
     # Get Groups
     try{
-        $GroupListEndpoint = [GroupListEndpoint]::new($3CXApiConnection)
-        $GroupList = $GroupListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $GroupList = $GroupFactory.getGroups()
     }catch {
         Write-Error ('Failed to Look Up Group List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
-    
-    $GroupFactory = [GroupFactory]::new($3CXApiConnection)
+
     $GroupMembershipMappingNames = $GroupMembershipMapping.GetNames()
     foreach( $Group in $GroupList ){
         # If this group is in the mapping file for membership management
@@ -340,6 +337,9 @@ if(-NOT $NoGroupMemberships){
 }
 
 if( -NOT $NoHotdesking){
+    ## Import Config\Mapping.json > Hotdesking
+    $HotdeskingConfig = [HotdeskingConfig]::New($MappingPath)
+    
     # Extract New and Update Hotdesking Mappings
     $NewMapping = $HotdeskingConfig.Mapping.New
     $UpdateMapping = $HotdeskingConfig.Mapping.Update
@@ -358,24 +358,19 @@ if( -NOT $NoHotdesking){
         Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
+    # Initialize HotdeskingFactory
+    $HotdeskingFactory = [HotdeskingFactory]::new($3CXApiConnection)
+    
     # Get A List of Hotdeskings from 3CX
     try{
-        $HotdeskingListEndpoint = [HotdeskingListEndpoint]::new($3CXApiConnection)
-        $HotdeskingList = $HotdeskingListEndpoint.Get() | Select-Object -ExpandProperty 'list'
+        $Hotdeskings = $HotdeskingFactory.getHotdeskings()
     }catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
-
-    # Create Hotdesking Factory
-    $HotdeskingFactory = [HotdeskingFactory]::new($3CXApiConnection)
     
-    # Marshal the Hotdesking List into Hotdesking objects.
-    $Hotdeskings = $HotdeskingFactory.makeHotdesking($HotdeskingList)
-
     # Get all Macs from the listed hotdeskings
-    $HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty MacAddress
+    $HotdeskingMacs = $Hotdeskings | Select-Object -ExpandProperty ($NewMapping.GetCSVHeader('MacAddress'))
 
-    $HotdeskingMacs = $HotdeskingList | Select-Object -ExpandProperty ($NewMapping.GetCSVHeader('MacAddress'))
     foreach( $row in $HotdeskingImportCSV.Config )
     {
         # Update Hotdesks
@@ -421,12 +416,12 @@ if( -NOT $NoHotdesking){
                     $message = ("Created Hotdesking: '{0}', '{1}', '{2}" -f $newHotdesking.GetName(), $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model)
                     if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
                     {
-                        $response = $HotdeskingEndpoint.Save($newHotdesking)    
+                        $response = $newHotdesking.save()
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                 }
                 catch {
-                    Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $row.$CSVNumberHeader)
+                    Write-PSFMessage -Level Critical -Message ("Failed to Create Hotdesk: '{0}'" -f $row.$CSVNumberHeader)
                 }
 
         }

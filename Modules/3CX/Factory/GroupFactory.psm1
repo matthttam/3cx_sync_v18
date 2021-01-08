@@ -19,7 +19,7 @@ Class GroupFactory : EntityFactory
     }
 
     # Create group objects from an array of group objects
-    [Array] makeGroup([Array] $objects){
+    [Group[]] makeGroup([Array] $objects){
         $return = @()
         foreach($object in $objects)
         {
@@ -42,5 +42,12 @@ Class GroupFactory : EntityFactory
     {
         $responseObject = $this._endpoint.New()
         return [Group]::new($responseObject, $this._endpoint)
+    }
+
+    # Get all extensions and return them as an array of extensions
+    [Group[]] getGroups()
+    {
+        $GroupList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
+        return $this.makeGroup($GroupList)
     }
 }

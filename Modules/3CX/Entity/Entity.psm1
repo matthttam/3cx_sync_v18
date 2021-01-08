@@ -8,6 +8,11 @@ Class Entity
     [boolean] $Dirty = $false
     $object
 
+    [String] $SaveMessageSuccess = "An entity has been saved."
+    [String] $SaveMessageFail = "Failed to save an entity."
+    [String] $UpdateMessageSuccess = "An entity has been staged to update."
+    [String] $UpdateMessageFail = "Failed to stage an entity for update."
+
     Entity($object, $endpoint)
     {
         $this.id = $object.id
@@ -76,6 +81,52 @@ Class Entity
     [boolean] IsDirty()
     {
         return ($this.GetDirty() -eq $true)
+    }
+
+    [String] GetSaveMessageSuccess()
+    {        
+        return $this.SaveMessageSuccess
+    }
+
+    [String] GetSaveMessageFail()
+    {
+        return $this.SaveMessageFail
+    }
+
+    # Saves the current entity via the api
+    [PSObject] Save()
+    {
+        try{
+            $response = $this._endpoint.Save( $this )
+            Write-PSFMessage -Level Output -Message ($this.GetSaveMessageSuccess())
+            return $response
+        }catch{
+            Write-PSFMessage -Level Critical -Message ($this.GetSaveMessageFail())
+            return $false
+        }
+    }
+
+    [String] GetUpdateMessageSuccess()
+    {
+        return $this.UpdateMessageSuccess
+    }
+
+    [String] GetUpdateMessageFail()
+    {
+        return $this.UpdateMessageFail
+    }
+
+    [PSObject] Update($PropertyPath, $CSVValue)
+    {
+        try{
+            $response = $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $CSVValue))
+            Write-PSFMessage -Level Output -Message ($this.GetUpdateMessageSuccess($args))
+            return $response
+        }catch{
+            Write-PSFMessage -Level Critical -Message ($this.GetUpdateMessageFail($args)  )
+            return $false
+        }
+
     }
 
 }

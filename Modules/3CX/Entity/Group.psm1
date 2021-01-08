@@ -6,6 +6,11 @@ Class Group : Entity
     [GroupListEndpoint] $_endpoint
     [Hashtable] $Members = @{}
 
+    [String] $SaveMessageSuccess = "An entity has been saved."
+    [String] $SaveMessageFail = "Failed to save an entity."
+    [String] $UpdateMessageSuccess = "An entity has been staged to update."
+    [String] $UpdateMessageFail = "Failed to stage an entity for update."
+
     Group($object, $endpoint) : base($object, $endpoint)
     {
         $this.Members.Selected = $this.QueryAllMembers()
@@ -103,7 +108,6 @@ Class Group : Entity
     [PSObject] RemoveMembers($members)
     {
         try{
-            
             $response = $this._endpoint.RemoveMembers( $this, $members )
             Write-PSFMessage -Level Output -Message ($this.GetRemoveMembersMessage($members))
             return $response
@@ -136,24 +140,18 @@ Class Group : Entity
         }
     }
 
-    [String] GetSaveMessage()
+    [String] GetSaveMessage([boolean] $success = $true)
     {
-        $message = ("Group {0} has been saved." -f $this.GetName())
+        if($success){
+            $message = ("Group {0} has been saved." -f $this.GetName())
+        }else{
+            $message = ("Failed to save Group: '{0}'" -f $this.GetName())
+        }
+        
         return $message
     }
     
-    [PSObject] Save()
-    {
-        try{
-            
-            $response = $this._endpoint.Save( $this )
-            Write-PSFMessage -Level Output -Message ($this.GetSaveMessage())
-            return $response
-        }catch{
-            Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $this.GetName() )
-            return $false
-        }
-    }
+    
 
     [string] GetName()
     {

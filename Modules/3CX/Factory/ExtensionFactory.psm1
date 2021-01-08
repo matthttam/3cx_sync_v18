@@ -20,7 +20,7 @@ Class ExtensionFactory : EntityFactory
     }
 
     # Create extension objects from an array of extension objects
-    [Array] makeExtension([Array] $objects){
+    [Extension[]] makeExtension([Array] $objects){
         $return = @()
         foreach($object in $objects)
         {
@@ -42,5 +42,12 @@ Class ExtensionFactory : EntityFactory
     {
         $responseObject = $this._endpoint.New()
         return [Extension]::new($responseObject, $this._endpoint)
+    }
+
+    # Get all extensions and return them as an array of extensions
+    [Extension[]] getExtensions()
+    {
+        $ExtensionList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
+        return $this.makeExtension($ExtensionList)
     }
 }

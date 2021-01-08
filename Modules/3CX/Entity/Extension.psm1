@@ -38,16 +38,16 @@ Class Extension : Entity
         return $message
     }
 
-    # Saves the current entity via the api
-    [PSObject] Save()
+    [String] GetSaveMessage([boolean] $success = $true)
     {
-        try{
-            $response = $this._endpoint.Save( $this )
-            Write-PSFMessage -Level Output -Message ($this.GetSaveMessage())
-            return $response
-        }catch{
-            Write-PSFMessage -Level Critical -Message ("Failed to Update Group: '{0}'" -f $this.GetName() )
-            return $false
+        if($success){
+            $message = ("Extension {0} has been saved." -f $this.GetNumber())
+        }else{
+            $message = ("Failed to save Extension: '{0}'" -f $this.GetNumber())
         }
+        
+        return $message
     }
+
+    
 }
