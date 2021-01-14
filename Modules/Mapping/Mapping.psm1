@@ -29,7 +29,12 @@ class Mapping
         if($attributeInfo.Type -eq [ValueType]::String  ){ 
             return $Value
         }elseif($attributeInfo.Type -eq [ValueType]::Enum ){ 
-            return $attributeInfo.possibleValues[$Value]
+            if($Value -in $attributeInfo.possibleValues){
+                return $Value
+            }else{
+                return $attributeInfo.possibleValues[$Value]
+            }
+            throw 'possible value listing for enum not supported'
         }elseif($attributeInfo.Type -eq [ValueType]::SelectedItem ){ 
             return $attributeInfo.possibleValues | Where-Object Id -eq $Value
         }elseif($attributeInfo.Type -eq [ValueType]::Boolean ){ 
@@ -39,17 +44,18 @@ class Mapping
                 return $false
             }
         }elseif($attributeInfo.Type -eq [ValueType]::Collection ){ 
-            throw 'Unsupported api mapping type'
+            throw 'Unsupported api mapping type Collection (12)'
         }elseif($attributeInfo.Type -eq [ValueType]::File ){ 
-            throw 'Unsupported api mapping type'
+            throw 'Unsupported api mapping type File (14)'
         }elseif($attributeInfo.Type -eq [ValueType]::Item ){ 
-            throw 'Unsupported api mapping type'
+            #throw 'Unsupported api mapping type Item (9)'
+            return [string] $Value
         }elseif($attributeInfo.Type -eq [ValueType]::ItemSet ){ 
-            throw 'Unsupported api mapping'
+            throw 'Unsupported api mappingtype ItemSet (13)'
         }elseif($attributeInfo.Type -eq [ValueType]::TimeRanges ){ 
-            throw 'Unsupported api mapping type'
+            throw 'Unsupported api mapping type TimeRanges (6)'
         }else{
-            throw 'Unsupported api mapping type'
+            throw 'Unsupported api mapping type Unknown'
         }
     }
 

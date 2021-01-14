@@ -13,6 +13,11 @@ class GroupMembershipMapping : Mapping
     [array] GetNames(){
         return $this.Mapping | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
     }
+    
+    [array] GetConditionsByGroupName($Name){
+        return $this.config.$Name.Conditions
+    }
+
     [boolean] EvaluateConditions([array]$Conditions, $row){
         if($Conditions -eq $null){
             throw 'Unable to evaluate null conditions'

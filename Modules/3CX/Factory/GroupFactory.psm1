@@ -12,10 +12,12 @@ Class GroupFactory : EntityFactory
     GroupFactory([APIConnection] $Connection) : base( $Connection ){
 
     }
-   
-    [Group] makeGroup([PSObject] $object)
+
+    # Create a brand new group
+    [Group] makeGroup()
     {
-        return [Group]::new($object, $this._endpoint)
+        $responseObject = $this._endpoint.New()
+        return [Group]::new($responseObject, $this._endpoint)
     }
 
     # Create group objects from an array of group objects
@@ -28,6 +30,20 @@ Class GroupFactory : EntityFactory
         return $return
     }
 
+    # Make group based off an object
+    #[Group] makeGroup([PSObject] $object)
+    #{
+    #    return [Group]::new($object, $this._endpoint)
+    #}
+
+    # Make group based off an object
+    [Group] makeGroup([PSObject] $object)
+    {
+        return $this.makeGroup($object.id)
+        #return [Group]::new($object, $this._endpoint)
+    }
+
+    # If a 32 bit integer is passed convert to 64 bit.
     [Group] makeGroup([int32] $id){ return $this.makeGroup([int64] $id)}
     # Create group based on specific ID
     [Group] makeGroup([int64] $id)
@@ -36,18 +52,17 @@ Class GroupFactory : EntityFactory
         $responseObject = $this._endpoint.set($payload)
         return [Group]::new($responseObject, $this._endpoint)
     }
-
-    # Create group as new object
-    [Group] makeGroup()
-    {
-        $responseObject = $this._endpoint.New()
-        return [Group]::new($responseObject, $this._endpoint)
-    }
-
-    # Get all extensions and return them as an array of extensions
+    
+    # Get all group and return them as an array of groups
     [Group[]] getGroups()
     {
         $GroupList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
+        return $this.makeGroup($GroupList)
+    }
+
+    # Get groups based on an array of names
+    [Group[]] getGroupsByName([array] $Names){
+        $GroupList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list' | Where-Object {$_.Name -in $Names}
         return $this.makeGroup($GroupList)
     }
 }

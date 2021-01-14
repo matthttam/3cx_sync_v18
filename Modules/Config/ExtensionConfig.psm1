@@ -41,19 +41,30 @@ class ExtensionConfig : Config
     {
         $this.Threshold.$name = $value
     }
-    [decimal] GetThreshold($name)
+    [decimal] GetThreshold([string] $name)
     {
-        return ($this.Threshold.$name).TrimEnd( '%', ' ') # Remove extra percent and spaces at end
+        if($this.HasThreshold($name) -eq $false){
+            return $null
+        }else{
+            return ($this.Threshold.$name).TrimEnd( '%', ' ') # Remove extra percent and spaces at end
+        }
     }
 
-    <# Return boolean weather or not the total and count exceed the desired threshold #>
-    [boolean] IsOverThreshold($name, $total, $count)
+    #Return boolean weather or not the percentage of modified extensions out of all active extensions exceeds the set threshold
+    [boolean] IsOverThreshold( [string] $name, $CountOfModified, $CountOfActiveExtensions)
     {
-        $Percentage = [Math]::Round( ($count / $total * 100),2)
+        $Percentage = [Math]::Round( ($CountOfModified / $CountOfActiveExtensions * 100),2)
         if( $Percentage -ge $this.GetThreshold($name) ){
             return $true
         }
         return $false
+    }
+
+    [boolean] HasThreshold([string] $name){
+        if($name -eq '' -or -not $this.Threshold.$name -or $this.Threshold.$name -eq $false){
+            return $false
+        }
+        return $true
     }
 
 }

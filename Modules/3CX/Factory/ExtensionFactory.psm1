@@ -13,10 +13,11 @@ Class ExtensionFactory : EntityFactory
 
     }
 
-    #Create an instance of a single extension
-    [Extension] makeExtension([PSObject] $object)
+    # Get all extensions and return them as an array of extensions
+    [Extension[]] getExtensions()
     {
-        return [Extension]::new($object, $this._endpoint)
+        $ExtensionList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
+        return $this.makeExtension($ExtensionList)
     }
 
     # Create extension objects from an array of extension objects
@@ -29,12 +30,29 @@ Class ExtensionFactory : EntityFactory
         return $return
     }
 
-    # Create extension based on specific ID
-    [Extension] makeExtension([string] $id)
+    #Create an instance of a single extension using a provided object
+    [Extension] makeExtension([PSObject] $object)
     {
-        $payload = @{"id" = $id}
-        $responseObject = $this._endpoint.set($payload)
-        return [Extension]::new($responseObject, $this._endpoint)
+        #return $this.makeExtension($object.)
+        return [Extension]::new($object, $this._endpoint)
+    }
+
+    # Create extension based on a specific ID
+    # If a 32 bit integer is passed convert to 64 bit.
+    [Extension] makeExtension([int32] $id){ return $this.makeExtension([int64] $id)}
+    [Extension] makeExtension([Int64] $id)
+    {
+        $ExtensionList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
+        $object = $ExtensionList | Where-Object {$_.id -eq $id}
+        if($object){
+            return [Extension]::new($object, $this._endpoint)
+        }else{
+            return $false
+        }
+        
+        #$payload = @{"id" = $id}
+        #$responseObject = $this._endpoint.set($payload)
+        #return [Extension]::new($responseObject, $this._endpoint)
     }
 
     # Create extension as new object
@@ -42,12 +60,8 @@ Class ExtensionFactory : EntityFactory
     {
         $responseObject = $this._endpoint.New()
         return [Extension]::new($responseObject, $this._endpoint)
+    
     }
 
-    # Get all extensions and return them as an array of extensions
-    [Extension[]] getExtensions()
-    {
-        $ExtensionList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
-        return $this.makeExtension($ExtensionList)
-    }
+
 }

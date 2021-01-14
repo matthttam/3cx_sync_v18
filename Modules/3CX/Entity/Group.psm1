@@ -4,15 +4,13 @@ Using module ..\Endpoints\GroupListEndpoint.psm1
 Class Group : Entity
 {
     [GroupListEndpoint] $_endpoint
+    [String] $Name
     [Hashtable] $Members = @{}
-
-    [String] $SaveMessageSuccess = "An entity has been saved."
-    [String] $SaveMessageFail = "Failed to save an entity."
-    [String] $UpdateMessageSuccess = "An entity has been staged to update."
-    [String] $UpdateMessageFail = "Failed to stage an entity for update."
+    
 
     Group($object, $endpoint) : base($object, $endpoint)
     {
+        $this.SetName($this.object.Name._value)
         $this.Members.Selected = $this.QueryAllMembers()
     }
 
@@ -28,8 +26,8 @@ Class Group : Entity
         return $this.QueryPossibleValues("")
     }
 
-    # Searches by ID
-    # Returns only the item by its ID or Null
+    # Searches by Number
+    # Returns only the item by its Number or Null
 
     [PSObject] QueryPossibleValuesByNumber([string] $search)
     {
@@ -139,23 +137,27 @@ Class Group : Entity
             return $null
         }
     }
-
-    [String] GetSaveMessage([boolean] $success = $true)
-    {
-        if($success){
-            $message = ("Group {0} has been saved." -f $this.GetName())
-        }else{
-            $message = ("Failed to save Group: '{0}'" -f $this.GetName())
-        }
-        
-        return $message
+    
+    # Sets/Gets Model
+    [void] SetName($Name){
+        $this.Name = $Name
     }
-    
-    
+    [string] GetName(){
+        return $this.Name
+    }
 
-    [string] GetName()
-    {
-        return $this.object.Name._value
+    [PSObject] Save(){
+        return $this.Save(
+            "Group '{0}' has been saved." -f $this.GetNumber(),
+            "Failed to save Group: '{0}'" -f $this.GetNumber()
+        )
+    }
+
+    [PSObject] Update($PropertyPath, $CSVValue){
+        return $this.Save(
+            "Group '{0}' has been updated." -f $this.GetNumber(),
+            "Failed to update Group: '{0}'" -f $this.GetNumber()
+        )
     }
 
 }
