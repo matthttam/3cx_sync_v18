@@ -42,25 +42,7 @@ Class Entity
     [void] SetObjectValue( [array] $PropertyValues, $Value){
         $this.SetObjectValue( $PropertyValues, $Value, $this.object )
     }
-    <#
-    [void] SetObjectValue( [array] $PropertyValues, $Value, [pscustomobject] $object){
-        $first, $rest = $PropertyValues
-        $attributeInfo = $this.GetObjectAttributeInfo($first, $object)
-        if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
-            $store = 'selected'
-        }elseif($attributeInfo -is [string] -or $attributeInfo -is [int64] -or $attributeInfo -is [boolean]){
-            $object.$first = $Value
-            return
-        }else{
-            $store = '_value'
-        }
 
-        if ($rest) {
-            $this.SetObjectValue($rest, $Value, $object.$first.$store )
-        } else {
-            $object.$first.$store = $Value
-        }
-    }#>
     [void] SetObjectValue( [array] $PropertyValues, $Value, [pscustomobject] $object){
         $first, $rest = $PropertyValues
 		$store = $this.GetObjectValuePropertyName( $this.GetObjectAttributeInfo($first, $object) )

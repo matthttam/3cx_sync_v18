@@ -12,7 +12,7 @@ class Mapping
         $this.SetMapping($mapping)
     }
 
-    <# Sets/Gets mapping object #>
+    # Sets/Gets mapping object
     [void] SetMapping($mapping){
         $this.mapping = $mapping
     }
@@ -24,6 +24,7 @@ class Mapping
         return @($this.mapping.PSObject.Properties | Select-Object -ExpandProperty 'Value')
     }
 
+    # Convert a value to the type specified from an attributeInfo
     [PSObject] ConvertToType( $Value, $attributeInfo )
     {
         if($attributeInfo.Type -eq [ValueType]::String  ){ 

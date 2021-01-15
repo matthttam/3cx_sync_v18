@@ -26,7 +26,7 @@ class ExtensionConfig : Config
 
 
 
-    <# Sets/Gets Key Settings #>
+    # Sets/Gets Key Settings
     [void] SetKey([string] $Key)
     {
         $this.Key = $Key
@@ -36,7 +36,7 @@ class ExtensionConfig : Config
         return $this.Key
     }
 
-    <# Sets/Gets Threshold Settings #>
+    # Sets/Gets Threshold Settings
     [void] SetThreshold($name, $value)
     {
         $this.Threshold.$name = $value

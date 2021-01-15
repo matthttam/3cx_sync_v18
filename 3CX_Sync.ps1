@@ -13,14 +13,14 @@ Using module .\Modules\3CX\Factory\HotdeskingFactory.psm1
 
 [CmdletBinding(SupportsShouldProcess)]
 Param(
-    [Switch] $NoExtensions,         <# Do not create or update extensions#>
-    [Switch] $NoNewExtensions,      <# Do not create extensions #>
-    [Switch] $NoUpdateExtensions,   <# Do not update extensions #>
+    [Switch] $NoExtensions,         # Do not create or update extensions
+    [Switch] $NoNewExtensions,      # Do not create extensions
+    [Switch] $NoUpdateExtensions,   # Do not update extensions
     [Alias("NoGroups")]
-    [Switch] $NoGroupMemberships,   <# Do not adjust any group memberships #>
-    [Switch] $NoHotdesking,         <# Do not create or update hotdesking #>
-    [Switch] $NoNewHotdesking,      <# Do not create hotdesking #>
-    [Switch] $NoUpdateHotdesking    <# Do not update hotdesking #>
+    [Switch] $NoGroupMemberships,   # Do not adjust any group memberships
+    [Switch] $NoHotdesking,         # Do not create or update hotdesking
+    [Switch] $NoNewHotdesking,      # Do not create hotdesking
+    [Switch] $NoUpdateHotdesking    # Do not update hotdesking
 )
 
 # Set security protocols that are supported
@@ -140,9 +140,6 @@ if(-NOT $NoExtensions){
             if($NoNewExtensions -eq $false){
                 Write-Verbose ("Need to Create Extension: '{0}'" -f $CurrentExtensionNumber)
 
-                # Create a template extension to determine types of fields
-                #$TemplateExtension = $ExtensionFactory.makeExtension()
-                #$TemplateExtension.set()
                 # Begin building new extension
                 try{
                     $NewExtension = $ExtensionFactory.makeExtension()
@@ -165,8 +162,6 @@ if(-NOT $NoExtensions){
             }
         }
     }
-        
-    #if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message)){
     
     $ExtensionsToUpdate = $Extensions | Where-Object { $_.IsDirty() -eq $true }
     # Count the number of extensions that are primed to be disabled
@@ -202,34 +197,7 @@ if(-NOT $NoExtensions){
             }
         }
     }
-    <#
-    # Are we removing any extensions?
-    if($ExtensionConfig.HasThreshold('Remove') -and $ExtensionsToBeDisabled.length -gt 0){
-        # Are we exceeding our threshold?
-        if($ExtensionConfig.IsOverThreshold('Remove', $ExtensionsToBeDisabled.length, $CountOfActiveExtensions)){
-            $message = "Threshold for disabling extensions exceeded. Some extensions will not be updated. Count of Extensions to be Disabled: {0} Count of all active extensions in import file {1}"
-            Write-PSFMessage -Level Critical -Message ($message -f $ExtensionsToBeDisabled.length, $CountOfActiveExtensions)
-            # Reset each extension that would have been disabled
-            foreach($Extension in $ExtensionsToBeDisabled){
-                Write-PSFMessage -Level Critical -Message ('Update canceled for Extension Number {0}' -f $Extension.GetNumber())
-                $Extension.CancelUpdate()
-            }
-        }
-    }
-    # Are we adding any extensions?
-    if($ExtensionConfig.HasThreshold('Add') -and $ExtensionsToBeAdded.length -gt 0){
-        # Are we exceeding our threshold?
-        if($ExtensionConfig.IsOverThreshold('Add', $ExtensionsToBeDisabled.length, $CountOfActiveExtensions)){
-            $message = "Threshold for adding extensions exceeded. Some extensions will not be updated. Count of Extensions to be Added: {0} Count of all active extensions in import file {1}"
-            Write-PSFMessage -Level Critical -Message ($message -f $ExtensionsToAdded.length, $CountOfActiveExtensions)
-            # Reset each extension that would have been disabled
-            foreach($Extension in $ExtensionsToBeAdded){
-                Write-PSFMessage -Level Critical -Message ('Update canceled for Extension Number {0}' -f $Extension.GetNumber())
-                $Extension.CancelUpdate()
-            }
-        }
-    }
-#>
+
     foreach($Extension in $ExtensionsToUpdate){
         if($Extension.IsDirty()){
             $Extension.save()

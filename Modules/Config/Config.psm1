@@ -28,7 +28,7 @@ class Config
         }
     }
 
-    <# Sets/Gets ConfigNode #>
+    # Sets/Gets ConfigNode
     [void] SetConfigNode([array] $ConfigNode){
         $this.ConfigNode = $ConfigNode
     }
@@ -38,7 +38,7 @@ class Config
         return $this.ConfigNode
     }
 
-    <# Sets/Gets RequiredFields Array #>
+    # Sets/Gets RequiredFields Array
     [void] SetRequiredFields([array] $RequiredFields){
         $this.RequiredFields = $RequiredFields
     }
@@ -48,7 +48,7 @@ class Config
         return $this.RequiredFields
     }
 
-    <# Sets/Gets Config of Config Data #>
+    # Sets/Gets Config of Config Data
     [void] SetConfig([string] $FullPath){
         $JsonFile = (Get-Content -Path $FullPath) | ConvertFrom-Json -Depth 10 -ErrorAction Stop
         if($this.ConfigNode){
@@ -63,7 +63,7 @@ class Config
         return $this.Config
     }
 
-    <# Sets/Gets Filename of Config File #>
+    # Sets/Gets Filename of Config File
     [void] SetFullPath([string] $FullPath){
         $this.FullPath = $FullPath
     }
@@ -73,7 +73,7 @@ class Config
         return $this.FullPath
     }
 
-    <# Sets/Gets Path where Config File resides #>
+    # Sets/Gets Path where Config File resides
     [void] SetPath([string] $FullPath){
         $this.Path = Split-Path $FullPath
     }
@@ -83,7 +83,7 @@ class Config
         return $this.Path
     }
 
-    <# Sets/Gets Filename of ConfigF File #>
+    # Sets/Gets Filename of ConfigF File
     [void] SetFilename([string] $FullPath){
         $this.Filename = Split-Path $FullPath -Leaf
     }
@@ -93,7 +93,7 @@ class Config
         return $this.Filename
     }
 
-    <# Verify File Exists #>
+    # Verify File Exists
     [void] VerifyFileExists($FullPath)
     {
         if(-not (Test-Path $FullPath))
@@ -121,7 +121,7 @@ class Config
         }
     }
 
-    <# Sets/Gets CSVPath Settings #>
+    # Sets/Gets CSVPath Settings
     [void] SetCSVPath([string] $CSVPath)
     {
         $this.CSVPath = $CSVPath

@@ -8,7 +8,7 @@ class CSV {
         $this.SetData($FullPath)
     }
 
-    <# Sets/Gets CSV Data #>
+    # Sets/Gets CSV Data
     [void] SetData([string] $FullPath){
         $this.data = (Get-Content -Path $FullPath) | ConvertFrom-CSV -ErrorAction Stop
     }
@@ -18,7 +18,7 @@ class CSV {
         return $this.data
     }
 
-    <# Verify File Exists #>
+    # Verify File Exists
     [void] VerifyFileExists($FullPath)
     {
         if(-not (Test-Path $FullPath))
