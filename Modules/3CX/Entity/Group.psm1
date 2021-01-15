@@ -118,6 +118,7 @@ Class Group : Entity
                 Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
             }
         }
+        $this.SetDirty()
     }
 
     # Return string of message to use when members are added.
@@ -132,13 +133,17 @@ Class Group : Entity
     # Add Members
     [void] AddMembers($members)
     {
-        try{
-            
-            $this._endpoint.AddMembers( $this, $members ) | Out-Null
-            Write-PSFMessage -Level Output -Message ($this.GetAddMembersMessage($members))
-        }catch{
-            Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
+        if ($PSCmdlet.ShouldProcess($this.GetIdentifier(), $this.GetAddMembersMessage($members)))
+        {
+            try{
+                
+                $this._endpoint.AddMembers( $this, $members ) | Out-Null
+                Write-PSFMessage -Level Output -Message ($this.GetAddMembersMessage($members))
+            }catch{
+                Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
+            }
         }
+        $this.SetDirty()
     }
     
     # Sets/Gets Model

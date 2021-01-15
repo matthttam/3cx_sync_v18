@@ -54,14 +54,14 @@ Class GroupFactory : EntityFactory
     }
     
     # Get all group and return them as an array of groups
-    [Group[]] getGroups()
+    [Group[]] GetGroups()
     {
         $GroupList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
         return $this.makeGroup($GroupList)
     }
 
     # Get groups based on an array of names
-    [Group[]] getGroupsByName([array] $Names){
+    [Group[]] GetGroupsByName([array] $Names){
         $GroupList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list' | Where-Object {$_.Name -in $Names}
         return $this.makeGroup($GroupList)
     }

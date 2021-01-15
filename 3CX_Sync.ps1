@@ -20,7 +20,8 @@ Param(
     [Switch] $NoGroupMemberships,   # Do not adjust any group memberships
     [Switch] $NoHotdesking,         # Do not create or update hotdesking
     [Switch] $NoNewHotdesking,      # Do not create hotdesking
-    [Switch] $NoUpdateHotdesking    # Do not update hotdesking
+    [Switch] $NoUpdateHotdesking,   # Do not update hotdesking
+    [Switch] $Force                 # Ignore Thresholds
 )
 
 # Set security protocols that are supported
@@ -87,7 +88,7 @@ if(-NOT $NoExtensions){
 
     # Get A List of Extensions
     try{
-        $Extensions = [Collections.ArrayList] $ExtensionFactory.getExtensions()
+        $Extensions = [Collections.ArrayList] $ExtensionFactory.GetExtensions()
     } catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
@@ -163,39 +164,45 @@ if(-NOT $NoExtensions){
         }
     }
     
+    # Get a list of all dirty extensions that need to be saved at this point.
     $ExtensionsToUpdate = $Extensions | Where-Object { $_.IsDirty() -eq $true }
-    # Count the number of extensions that are primed to be disabled
-    $ExtensionsToDisable = $Extensions | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True }
-    # Count the number of extensions that will be added
-    $ExtensionsToAdd = $Extensions | Where-Object {$_.IsNew() -eq $true }
-    # The CSV file will contain the number of extensions that will be or remain active
-    $CountOfActiveExtensions = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
+    
+    if(-NOT $force){
+        # Count the number of extensions that are primed to be disabled
+        $ExtensionsToDisable = $Extensions | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True }
+        # Count the number of extensions that will be added
+        $ExtensionsToAdd = $Extensions | Where-Object {$_.IsNew() -eq $true }
+        # The CSV file will contain the number of extensions that will be or remain active
+        $CountOfActiveExtensions = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
 
-    $Thresholds = @(
-        @{
-        'Name' = 'Remove'
-        'ExceededMessage' = "Threshold for disabling extensions exceeded. Some extensions will not be updated. Count of Extensions to be Disabled: {0} Count of all active extensions in import file {1}" -f $ExtensionsToDisable.length, $CountOfActiveExtensions
-        'CanceledMessage' = 'Update canceled for Extension Number {0}'
-        },
-        @{
-            'Name' = 'Add'
-            'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be updated. Count of Extensions to be Added: {0} Count of all active extensions in import file {1}" -f $ExtensionsToAdd.length, $CountOfActiveExtensions
+        $Thresholds = @(
+            @{
+            'Name' = 'Remove'
+            'ExceededMessage' = "Threshold for disabling extensions exceeded. Some extensions will not be updated. Count of Extensions to be Disabled: {0} Count of all active extensions in import file {1}" -f $ExtensionsToDisable.length, $CountOfActiveExtensions
             'CanceledMessage' = 'Update canceled for Extension Number {0}'
-        }
-    )
-    foreach( $Threshold in $Thresholds){
-        # Are we removing any extensions?
-        if($ExtensionConfig.HasThreshold($Threshold.Name) -and $ExtensionsToDisable.length -gt 0){
-            # Are we exceeding our threshold?
-            if($ExtensionConfig.IsOverThreshold($Threshold.Name, $ExtensionsToDisable.length, $CountOfActiveExtensions)){
-                Write-PSFMessage -Level Critical -Message ($Threshold.ExceededMessage)
-                # Reset each extension that would have been disabled
-                foreach($Extension in $ExtensionsToDisable){
-                    Write-PSFMessage -Level Critical -Message ($Threshold.CanceledMessage -f $Extension.GetNumber())
-                    $Extension.CancelUpdate()
+            },
+            @{
+                'Name' = 'Add'
+                'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be updated. Count of Extensions to be Added: {0} Count of all active extensions in import file {1}" -f $ExtensionsToAdd.length, $CountOfActiveExtensions
+                'CanceledMessage' = 'Update canceled for Extension Number {0}'
+            }
+        )
+        foreach( $Threshold in $Thresholds){
+            # Are we removing any extensions?
+            if($ExtensionConfig.HasThreshold($Threshold.Name) -and $ExtensionsToDisable.length -gt 0){
+                # Are we exceeding our threshold?
+                if($ExtensionConfig.IsOverThreshold($Threshold.Name, $ExtensionsToDisable.length, $CountOfActiveExtensions)){
+                    Write-PSFMessage -Level Critical -Message ($Threshold.ExceededMessage)
+                    # Reset each extension that would have been disabled
+                    foreach($Extension in $ExtensionsToDisable){
+                        Write-PSFMessage -Level Critical -Message ($Threshold.CanceledMessage -f $Extension.GetNumber())
+                        $Extension.CancelUpdate()
+                    }
                 }
             }
         }
+    }else{
+        Write-PSFMessage -Level Output -Message ''
     }
 
     foreach($Extension in $ExtensionsToUpdate){
@@ -232,7 +239,7 @@ if(-NOT $NoGroupMemberships){
 
     # Get Groups
     try{
-        $Groups = $GroupFactory.getGroupsByName( $GroupMembershipMapping.GetNames() )
+        $Groups = $GroupFactory.GetGroupsByName( $GroupMembershipMapping.GetNames() )
     }catch {
         Write-Error ('Failed to Look Up Group List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
@@ -246,9 +253,13 @@ if(-NOT $NoGroupMemberships){
         # Loop over CSV Data and determine what extensions should be added or removed from this group
         foreach( $row in $GroupMembershipImportCSV.Data ){
             # Determine Proper Extensions in Group
-            if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.GetConditionsByGroupName($Group.Name), $row) ){
+            if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.Name), $row) ){
                 # True or false based on if the row exists
-                $FoundSelected = ( ($CurrentGroup.GetSelectedByNumber($row.Number) ), $false -ne $null)[0]
+                $FoundSelected = $CurrentGroup.GetSelectedByNumber($row.Number)
+                if(-NOT $FoundSelected){
+                    $FoundSelected = $false
+                }
+                #$FoundSelected = ( ($CurrentGroup.GetSelectedByNumber($row.Number) ), $false -ne $null)[0]
 
                 # If this Number is Selected Already
                 if( $FoundSelected ){
@@ -259,7 +270,7 @@ if(-NOT $NoGroupMemberships){
                     $FoundPossibleValue = $CurrentGroup.QueryPossibleValuesByNumber($row.Number)
                     if($FoundPossibleValue){
                         # Add the found value to $ExtensionsToAdd if not already in it
-                        if( -NOT ( $ExtensionsToAdd -Contains $FoundPossibleValue ) ){
+                        if( $ExtensionsToAdd -NotContains $FoundPossibleValue ){
                             $ExtensionsToAdd += $FoundPossibleValue  
                         }
                     }else{
@@ -276,38 +287,14 @@ if(-NOT $NoGroupMemberships){
             if($ExtensionsToAdd.count -gt 0)
             {
                 # Stage Adding Members
-                # If WhatIf isn't set
-                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd)))
-                {
-                    #Stage Adding Members, continue on error
-                    try{
-                        $CurrentGroup.AddMembers($ExtensionsToAdd);
-                    }catch{
-                        continue
-                    }
-                }else{
-                    $CurrentGroup.SetDirty($true);
-                }
+                $CurrentGroup.AddMembers($ExtensionsToAdd);
             }
 
             # If there are extensions to remove
             if($ExtensionsToRemove.count -gt 0)
             {
-                # If Remove threshold has been met
-                $MappingConfig.config.Extension.threshold
                 # Stage Removing Members
-                # If WhatIf isn't set
-                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetRemoveMembersMessage($ExtensionsToRemove)))
-                {
-                    #Stage Removing Members, continue on error
-                    try{
-                        $CurrentGroup.RemoveMembers($ExtensionsToRemove);
-                    }catch{
-                        continue
-                    }
-                }else{
-                    $CurrentGroup.SetDirty($true);
-                }
+                $CurrentGroup.RemoveMembers($ExtensionsToRemove);
             }
 
             # Check if current group is dirty first
@@ -346,7 +333,7 @@ if( -NOT $NoHotdesking){
     
     # Get A List of Hotdeskings from 3CX
     try{
-        $Hotdeskings = $HotdeskingFactory.getHotdeskings()
+        $Hotdeskings = $HotdeskingFactory.GetHotdeskings()
     }catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }

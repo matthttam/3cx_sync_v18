@@ -49,7 +49,7 @@ Class HotdeskingFactory : EntityFactory
     }
 
     #Get all hotdeskings and return them as an array of hotdesking
-    [Hotdesking[]] getHotdeskings()
+    [Hotdesking[]] GetHotdeskings()
     {
         $HotdeskingList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
         return $this.makeHotdesking($HotdeskingList)

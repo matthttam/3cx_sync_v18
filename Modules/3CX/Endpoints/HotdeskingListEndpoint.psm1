@@ -38,7 +38,7 @@ Class HotdeskingListEndpoint : Endpoint
         foreach($Path in $PropertyPathString.split('.'))
         {
             $PathObject = @{Name = $Path};
-            # If it is a collection, get the collection ID
+            # If it is a collection, Get the collection ID
             if($entity.object.$Path.type -eq 'Collection')
             {
                 $PathObject.IdInCollection = $entity.object.$Path._value.Id

@@ -14,7 +14,7 @@ Class ExtensionFactory : EntityFactory
     }
 
     # Get all extensions and return them as an array of extensions
-    [Extension[]] getExtensions()
+    [Extension[]] GetExtensions()
     {
         $ExtensionList = $this._endpoint.Get() | Select-Object -ExpandProperty 'list'
         return $this.makeExtension($ExtensionList)
