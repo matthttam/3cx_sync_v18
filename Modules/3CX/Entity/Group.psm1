@@ -24,7 +24,7 @@ Class Group : Entity
         return $this.QueryPossibleValues()
     }
 
-    # Query for all possible values by calling QueryPOssibelValues with empty search
+    # Query for all possible values by calling QueryPossibelValues with empty search
     [PSObject] QueryPossibleValues()
     {
         return $this.QueryPossibleValues("")
@@ -36,17 +36,19 @@ Class Group : Entity
     [PSObject] QueryPossibleValuesByNumber([string] $search)
     {
         $results = $this.QueryPossibleValues($search)
-        return (($results | Where-Object -filterScript {$_.Number._value -eq "$search"}), $false -ne $null)[0]
+        $return = $results | Where-Object -filterScript {$_.Number._value -eq "$search"}
+        if(-NOT $return){
+            $return = $false
+        }
+        return $return
     }
 
     # Allow a specific search
-    # Returns an array
     [PSObject] QueryPossibleValues([string] $search)
     {
         $state = @{"Start" = 0; "SortBy" = $null; "Reverse" = $false; "Search" = $search}
         return $this.QueryPossibleValues($state)
     }
-
     # Perform actual query on endpoint using this object and the state
     [PSObject] QueryPossibleValues([Hashtable] $state)
     {
@@ -58,7 +60,6 @@ Class Group : Entity
     {
         return $this.QueryMembers()
     }
-
     # Query for all selected members by calling QueryPOssibelValues with empty search
     [PSObject] QueryMembers()
     {
@@ -69,7 +70,11 @@ Class Group : Entity
     [PSObject] QueryMembersByNumber([string] $search)
     {
         $results = $this.QueryMembers($search)
-        return ( ($results | Where-Object -filterScript {$_.Number._value -eq "$search"}), $false -ne $null)[0]
+        $return = $results | Where-Object -filterScript {$_.Number._value -eq "$search"}
+        if(-Not $return){
+            $return = $false
+        }
+        return $return
     }
 
     # Query members with search string

@@ -253,7 +253,7 @@ if(-NOT $NoGroupMemberships){
         # Loop over CSV Data and determine what extensions should be added or removed from this group
         foreach( $row in $GroupMembershipImportCSV.Data ){
             # Determine Proper Extensions in Group
-            if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.Name), $row) ){
+            if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $row) ){
                 # True or false based on if the row exists
                 $FoundSelected = $CurrentGroup.GetSelectedByNumber($row.Number)
                 if(-NOT $FoundSelected){

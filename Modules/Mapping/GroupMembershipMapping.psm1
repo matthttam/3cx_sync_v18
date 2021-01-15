@@ -15,11 +15,11 @@ class GroupMembershipMapping : Mapping
     }
     
     [array] GetConditionsByGroupName($Name){
-        return $this.config.$Name.Conditions
+        return $this.Mapping.$Name.Conditions
     }
 
     [boolean] EvaluateConditions([array]$Conditions, $row){
-        if($Conditions -eq $null){
+        if($null -eq $Conditions){
             throw 'Unable to evaluate null conditions'
         }
         $return = $true

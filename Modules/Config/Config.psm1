@@ -7,6 +7,7 @@ class Config
     [string] $ConfigNode = $null
     [array] $RequiredFields = $null
     [string] $CSVPath
+    [hashtable] $Threshold = @{}
 
     Config( [string] $FullPath )
     {
@@ -129,5 +130,37 @@ class Config
     [string] GetCSVPath()
     {
         return $this.CSVPath
+    }
+
+    # Sets/Gets Threshold Settings
+    [void] SetThreshold($name, $value)
+    {
+        $this.Threshold.$name = $value
+    }
+    [decimal] GetThreshold([string] $name)
+    {
+        if($this.HasThreshold($name) -eq $false){
+            return $null
+        }else{
+            return ($this.Threshold.$name).TrimEnd( '%', ' ') # Remove extra percent and spaces at end
+        }
+    }
+
+    #Return boolean weather or not the percentage of modified extensions out of all active extensions exceeds the set threshold
+    [boolean] IsOverThreshold( [string] $name, $CountOfModified, $TotalCount)
+    {
+        $Percentage = [Math]::Round( ($CountOfModified / $TotalCount * 100),2)
+        if( $Percentage -ge $this.GetThreshold($name) ){
+            return $true
+        }
+        return $false
+    }
+
+    # Return if a specific threshold is in this config
+    [boolean] HasThreshold([string] $name){
+        if($name -eq '' -or -not $this.Threshold.$name -or $this.Threshold.$name -eq $false){
+            return $false
+        }
+        return $true
     }
 }
