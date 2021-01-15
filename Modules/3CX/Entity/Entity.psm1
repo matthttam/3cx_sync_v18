@@ -18,22 +18,23 @@ Class Entity
         $this.SetNew($this.GetObject().IsNew -eq $true)
     }
 
-    #[PSObject] GetProperty($PropertyName){
-        # Pull the Extension Value's attribute information (used for conversion)
-    #    $CurrentValueAttributeInfo = $this.GetObjectAttributeInfo($PropertyName)
+    [string] GetIdentifier(){
+        return ('Entity ID: {0}, ObjectID: {1}' -f $this.GetID(), $this.GetObjectID())
+    }
 
-        # Pull the current extension's actual value based on the Attribute Info provided
-    #    return $this.GetObjectValue($CurrentValueAttributeInfo)
-    #}
+    [string] GetObjectID(){
+        return $this.GetObjectValue('id')
+    }
     
     # Return appropriate selected values based on type
     [PSObject] GetObjectValue( $ExtensionPropertyValues )
     {
         $attributeInfo = $this.GetObjectAttributeInfo($ExtensionPropertyValues)
-        if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
-            return $attributeInfo.selected
+        $store = $this.GetObjectValuePropertyName($attributeInfo)
+        if($store -eq ''){
+            return $attributeInfo
         }else{
-            return $attributeInfo._value
+            return $attributeInfo.$store
         }
     }
 
@@ -41,11 +42,15 @@ Class Entity
     [void] SetObjectValue( [array] $PropertyValues, $Value){
         $this.SetObjectValue( $PropertyValues, $Value, $this.object )
     }
+    <#
     [void] SetObjectValue( [array] $PropertyValues, $Value, [pscustomobject] $object){
         $first, $rest = $PropertyValues
         $attributeInfo = $this.GetObjectAttributeInfo($first, $object)
         if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
             $store = 'selected'
+        }elseif($attributeInfo -is [string] -or $attributeInfo -is [int64] -or $attributeInfo -is [boolean]){
+            $object.$first = $Value
+            return
         }else{
             $store = '_value'
         }
@@ -55,7 +60,31 @@ Class Entity
         } else {
             $object.$first.$store = $Value
         }
+    }#>
+    [void] SetObjectValue( [array] $PropertyValues, $Value, [pscustomobject] $object){
+        $first, $rest = $PropertyValues
+		$store = $this.GetObjectValuePropertyName( $this.GetObjectAttributeInfo($first, $object) )
+		if($store -eq ''){
+			$object.$first = $Value
+		}else{
+			if ($rest) {
+            $this.SetObjectValue($rest, $Value, $object.$first.$store )
+			} else {
+				$object.$first.$store = $Value
+			}
+		}
     }
+	
+	[string] GetObjectValuePropertyName($attributeInfo){
+		if($attributeInfo -is [string] -or $attributeInfo -is [int64] -or $attributeInfo -is [boolean]){
+            return ''
+		}
+		if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
+            return 'selected'
+        }else{
+            return '_value'
+        }
+	}
 
     # Return attributeInfo of a path from the object
     [PSObject] GetObjectAttributeInfo($key)
@@ -117,6 +146,9 @@ Class Entity
     }
     [string] GetID(){
         return $this.id
+    }
+    [void] SetObjectId($id){
+
     }
 
     # Sets/Gets Endpoint
@@ -186,59 +218,66 @@ Class Entity
     }
 
     # Sets the object in 3CX which pulls additional information
-    [PSObject] Set($SuccessMessage = "An entity has been set.", $FailMessage = "Failed to set an entity."){
+    [void] Set($SuccessMessage = "An entity has been set.", $FailMessage = "Failed to set an entity."){
         try{
-            $response = $this._endpoint.set( @{"id" = $this.GetID()} )
-            $this.SetObject( $response )
-            Write-PSFMessage -Level Output -Message ($SuccessMessage)
-            return $response
+            # New objects are already set with a template and need only the ID Updated
+            if($this.IsNew()){
+                $response = $this._endpoint.New()
+                $this.SetID($response.Id)
+                $this.SetObjectValue('id', $response.ActiveObject.id)
+            }else{
+                $response = $this._endpoint.set( @{"id" = $this.GetID()} )
+                $this.SetObject( $response )
+            }
+            
+            Write-PSFMessage -Level Debug -Message ($SuccessMessage)
         }catch{
             Write-PSFMessage -Level Critical -Message ($FailMessage)
-            return $false
         }
     }
     
     # Saves the current entity via the api
-    [PSObject] Save($SuccessMessage = "An entity has been saved.", $FailMessage = "Failed to save an entity.")
+    [void] Save($SuccessMessage = "An entity has been saved.", $FailMessage = "Failed to save an entity.")
     {
-        $this.Set()
-        $this.WriteStagedUpdates()
-        try{
-            $response = $this._endpoint.Save( $this )
-            Write-PSFMessage -Level Output -Message ($SuccessMessage)
-            return $response
-        }catch{
-            Write-PSFMessage -Level Critical -Message ($FailMessage)
-            return $false
+        $this.CommitStagedUpdates()
+        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Save') ){
+            try{
+                $this._endpoint.Save( $this ) | Out-Null
+                Write-PSFMessage -Level Output -Message ($SuccessMessage)
+            }catch{
+                Write-PSFMessage -Level Critical -Message ($FailMessage)
+            }
         }
     }
 
     # Perform update commands on all staged updates
-    [void] WriteStagedUpdates(){
+    [void] CommitStagedUpdates(){
         $this.Set()
-        try{
-            foreach($key in $this.GetDirtyProperties().keys ){
-                $response = $this.Update($this.GetDirtyPropertiesPropertyPath($key), $this.GetDirtyPropertiesNewValue($key))
-            }
+        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'CommitStagedUpdates') ){
+            try{
+                foreach($key in $this.GetDirtyProperties().keys ){
+                    $this.Update($this.GetDirtyPropertiesPropertyPath($key), $this.GetDirtyPropertiesNewValue($key)) | Out-Null
+                }
             $this.ClearDirtyProperties()
-        }catch{
-            Write-PSFMessage -level Critical -Message ('An unexpected error has occured while writing staged updates to 3CX')
+            }catch{
+                Write-PSFMessage -level Critical -Message ('An unexpected error has occured while writing staged updates to 3CX')
+            }
         }
     }
 
     # Perform an update command
-    [PSObject] Update($PropertyPath, $CSVValue){
-        return Update($PropertyPath, $CSVValue, "An entity has been staged to update.", "Failed to stage an entity for update.")
+    [void] Update($PropertyPath, $CSVValue){
+        Update($PropertyPath, $CSVValue, "An entity has been staged to update.", "Failed to stage an entity for update.")
     }
-    [PSObject] Update($PropertyPath, $CSVValue, $SuccessMessage, $FailMessage)
+    [void] Update($PropertyPath, $CSVValue, $SuccessMessage, $FailMessage)
     {
-        try{
-            $response = $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $CSVValue))
-            Write-PSFMessage -Level Output -Message ($SuccessMessage)
-            return $response
-        }catch{
-            Write-PSFMessage -Level Critical -Message ($FailMessage)
-            return $false
+        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Update') ){
+            try{
+                $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $CSVValue)) | Out-Null
+                Write-PSFMessage -Level Output -Message ($SuccessMessage)
+            }catch{
+                Write-PSFMessage -Level Critical -Message ($FailMessage)
+            }
         }
     }
 

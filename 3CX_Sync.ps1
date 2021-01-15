@@ -49,9 +49,6 @@ $config = [ConnectionConfig]::new($ConfigPath)
 ## Mapping Path
 $MappingPath = (Join-Path -Path $dir -ChildPath 'Config' | Join-Path -ChildPath 'Mapping.json')
 
-
-
-
 ## Create API Connection Object
 $3CXApiConnection = [APIConnection]::New($config)
 
@@ -90,22 +87,10 @@ if(-NOT $NoExtensions){
 
     # Get A List of Extensions
     try{
-        $Extensions = $ExtensionFactory.getExtensions()
+        $Extensions = [Collections.ArrayList] $ExtensionFactory.getExtensions()
     } catch {
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
-    
-    #Build Lookup Table for finding the ID based on number
-    <#$ExtensionsNumberToID = @{}
-    foreach($Extension in $Extensions){
-        $ExtensionsNumberToID.Add($Extension.object.number, $Extension.id)
-    }#>
-
-    <#$ExtensionsNumberToIndex = @{}
-    foreach($Extension in $Extensions.GetEnumerator()){
-        $ExtensionsNumberToIndex.Add($Extension.GetNumber(), $Index.key)
-    }#>
-
 
     $UpdateMappingCSVKeys = $UpdateMapping.GetMappingCSVKeys()
     $NewMappingCSVKeys = $NewMapping.GetMappingCSVKeys()
@@ -122,7 +107,7 @@ if(-NOT $NoExtensions){
                 $CurrentExtension = $Extensions | Where-Object { $_.GetNumber() -eq $CurrentExtensionNumber }
                 
                 # Populate this extension with extended fields by setting it in 3CX
-                $response = $CurrentExtension.Set()
+                $CurrentExtension.Set()
 
                 #$UpdateRequired = $false
                 foreach($CSVHeader in $UpdateMappingCSVKeys)
@@ -148,11 +133,16 @@ if(-NOT $NoExtensions){
                         }
                     }
                 }
+            }
 
         # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
         }else{
             if($NoNewExtensions -eq $false){
                 Write-Verbose ("Need to Create Extension: '{0}'" -f $CurrentExtensionNumber)
+
+                # Create a template extension to determine types of fields
+                #$TemplateExtension = $ExtensionFactory.makeExtension()
+                #$TemplateExtension.set()
                 # Begin building new extension
                 try{
                     $NewExtension = $ExtensionFactory.makeExtension()
@@ -167,90 +157,82 @@ if(-NOT $NoExtensions){
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
 
                     $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
-                    try {
-                        if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
-                        {
-                            $UpdateResponse = $NewExtension.StageUpdate($NewMapping.GetParsedMappingKey($CSVHeader) , $CSVValue)
-                            Write-PSFMessage -Level Output -Message ($message)
-                        }
-                    } catch {
-                        Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($CurrentExtensionNumber))
-                        continue
-                    }
-                }
-                try {
-                    $message = ("Created Extension: '{0}'" -f $CurrentExtensionNumber)
-                    if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
-                    {
-                        #$response = $NewExtension.save() 
-                        #Write-PSFMessage -Level Output -Message ($message)
-                    }
-                }
-                catch {
-                    Write-PSFMessage -Level Critical -Message ("Failed to Create Extension: '{0}'" -f $CurrentExtensionNumber)
-                }
-            }
-        }
-
-        
-        # Loop over dirty extensions
-        #if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message)){
-        
-        $ExtensionsToUpdated = $Extensions | Where-Object { $_.IsDirty() -eq $true }
-        # Count the number of extensions that are primed to be disabled
-        $CountOfExtensionsToBeDisabled = ($Extensions | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True }).length
-        # Count the number of extensions that will be added
-        $CountOfExtensionsToBeAdded = ($Extensions | Where-Object {$_.IsNew() -eq $true }).length
-        # The CSV file will contain the number of extensions that will be or remain active
-        $CountOfActiveExtensions = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
-
-        if($ExtensionConfig.HasThreshold('Remove') -and $CountOfExtensionsToBeDisabled -gt 0){
-
-        }
-        if($ExtensionConfig.HasThreshold('Remove') -and $CountOfExtensionsToBeAdded -gt 0){
-
-        }
-        
-        if($TotalActiveExtensions -eq 0){
-            $CalculatedThresholdPercentage = 1
-        }else{
-            $CalculatedThresholdPercentage = $TotalExtensionsToBeDisabled / $TotalActiveExtensions
-        }
-
-        foreach($Extension in $ExtensionsToUpdated){
-            if($Extension.IsDirty()){
-                $NeedToUpdate += $Extension
-                If($Extension.DirtyProperties('Disabled')){
-                    $DisableCount = $DisableCount + 1
-                }
-            }
-        }
-        $UpdateRequired = $true
-        # Calculate how many are going to be disabled
-        $DisableCount = 0
-        # Calculate Percentage and Compare Against Threshold
-        $DisablePercentage
-
-        # Check threshold values and perform updates
-
-        # Set
-        # Update
-        # Save
-        
-        if($UpdateRequired){
-            try {
-
-                $message = ("Updated Extension: '{0}'" -f $CurrentExtensionNumber)
-                if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message))
-                {
-                    #$response = $CurrentExtension.save()
+                    $NewExtension.StageUpdate($NewMapping.GetParsedMappingValues($CSVHeader) , $CSVValue)
                     Write-PSFMessage -Level Output -Message ($message)
+                    
                 }
-                
+                $Extensions.Add($NewExtension)
             }
-            catch {
-                Write-PSFMessage -Level Critical -Message ("Failed to Update Extension: '{0}'" -f $CurrentExtensionNumber)
+        }
+    }
+        
+    #if ($PSCmdlet.ShouldProcess($CurrentExtensionNumber, $message)){
+    
+    $ExtensionsToUpdate = $Extensions | Where-Object { $_.IsDirty() -eq $true }
+    # Count the number of extensions that are primed to be disabled
+    $ExtensionsToDisable = $Extensions | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True }
+    # Count the number of extensions that will be added
+    $ExtensionsToAdd = $Extensions | Where-Object {$_.IsNew() -eq $true }
+    # The CSV file will contain the number of extensions that will be or remain active
+    $CountOfActiveExtensions = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
+
+    $Thresholds = @(
+        @{
+        'Name' = 'Remove'
+        'ExceededMessage' = "Threshold for disabling extensions exceeded. Some extensions will not be updated. Count of Extensions to be Disabled: {0} Count of all active extensions in import file {1}" -f $ExtensionsToDisable.length, $CountOfActiveExtensions
+        'CanceledMessage' = 'Update canceled for Extension Number {0}'
+        },
+        @{
+            'Name' = 'Add'
+            'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be updated. Count of Extensions to be Added: {0} Count of all active extensions in import file {1}" -f $ExtensionsToAdd.length, $CountOfActiveExtensions
+            'CanceledMessage' = 'Update canceled for Extension Number {0}'
+        }
+    )
+    foreach( $Threshold in $Thresholds){
+        # Are we removing any extensions?
+        if($ExtensionConfig.HasThreshold($Threshold.Name) -and $ExtensionsToDisable.length -gt 0){
+            # Are we exceeding our threshold?
+            if($ExtensionConfig.IsOverThreshold($Threshold.Name, $ExtensionsToDisable.length, $CountOfActiveExtensions)){
+                Write-PSFMessage -Level Critical -Message ($Threshold.ExceededMessage)
+                # Reset each extension that would have been disabled
+                foreach($Extension in $ExtensionsToDisable){
+                    Write-PSFMessage -Level Critical -Message ($Threshold.CanceledMessage -f $Extension.GetNumber())
+                    $Extension.CancelUpdate()
+                }
             }
+        }
+    }
+    <#
+    # Are we removing any extensions?
+    if($ExtensionConfig.HasThreshold('Remove') -and $ExtensionsToBeDisabled.length -gt 0){
+        # Are we exceeding our threshold?
+        if($ExtensionConfig.IsOverThreshold('Remove', $ExtensionsToBeDisabled.length, $CountOfActiveExtensions)){
+            $message = "Threshold for disabling extensions exceeded. Some extensions will not be updated. Count of Extensions to be Disabled: {0} Count of all active extensions in import file {1}"
+            Write-PSFMessage -Level Critical -Message ($message -f $ExtensionsToBeDisabled.length, $CountOfActiveExtensions)
+            # Reset each extension that would have been disabled
+            foreach($Extension in $ExtensionsToBeDisabled){
+                Write-PSFMessage -Level Critical -Message ('Update canceled for Extension Number {0}' -f $Extension.GetNumber())
+                $Extension.CancelUpdate()
+            }
+        }
+    }
+    # Are we adding any extensions?
+    if($ExtensionConfig.HasThreshold('Add') -and $ExtensionsToBeAdded.length -gt 0){
+        # Are we exceeding our threshold?
+        if($ExtensionConfig.IsOverThreshold('Add', $ExtensionsToBeDisabled.length, $CountOfActiveExtensions)){
+            $message = "Threshold for adding extensions exceeded. Some extensions will not be updated. Count of Extensions to be Added: {0} Count of all active extensions in import file {1}"
+            Write-PSFMessage -Level Critical -Message ($message -f $ExtensionsToAdded.length, $CountOfActiveExtensions)
+            # Reset each extension that would have been disabled
+            foreach($Extension in $ExtensionsToBeAdded){
+                Write-PSFMessage -Level Critical -Message ('Update canceled for Extension Number {0}' -f $Extension.GetNumber())
+                $Extension.CancelUpdate()
+            }
+        }
+    }
+#>
+    foreach($Extension in $ExtensionsToUpdate){
+        if($Extension.IsDirty()){
+            $Extension.save()
         }
     }
 }
@@ -363,18 +345,7 @@ if(-NOT $NoGroupMemberships){
             # Check if current group is dirty first
             if($CurrentGroup.IsDirty())
             {
-                # If What If isn't set
-                if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetSaveMessage()))
-                {
-                    # Save Any Staged Changes Group
-                    try{
-                        $response = $CurrentGroup.Save()
-                    }catch{
-                        continue
-                    }
-                }else{
-                    $CurrentGroup.SetDirty($false)
-                }
+                $CurrentGroup.Save()
             }
         }
     }
@@ -448,7 +419,7 @@ if( -NOT $NoHotdesking){
                     try {
                         if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
                         {
-                            $UpdateResponse = $HotdeskingEndpoint.Update($newHotdesking, $NewMapping.GetApiPath($CSVHeader), $CSVValue )
+                            $HotdeskingEndpoint.Update($newHotdesking, $NewMapping.GetApiPath($CSVHeader), $CSVValue ) | Out-Null
                             Write-PSFMessage -Level Output -Message ($message)
                         }
                     } catch {
@@ -460,7 +431,7 @@ if( -NOT $NoHotdesking){
                     $message = ("Created Hotdesking: '{0}', '{1}', '{2}" -f $newHotdesking.GetName(), $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model)
                     if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
                     {
-                        $response = $newHotdesking.save()
+                        $newHotdesking.Save() | Out-Null
                         Write-PSFMessage -Level Output -Message ($message)
                     }
                 }

@@ -14,6 +14,10 @@ Class Group : Entity
         $this.Members.Selected = $this.QueryAllMembers()
     }
 
+    [string] GetIdentifier(){
+        return ('Group Name: {0}, ObjectID: {1}' -f $this.GetName(), $this.GetObjectID())
+    }
+
     # Alias for QueryPosisbleValues()
     [PSObject] QueryAllPossibleValues()
     {
@@ -103,15 +107,16 @@ Class Group : Entity
     }
 
     # Remove Members
-    [PSObject] RemoveMembers($members)
+    [void] RemoveMembers($members)
     {
-        try{
-            $response = $this._endpoint.RemoveMembers( $this, $members )
-            Write-PSFMessage -Level Output -Message ($this.GetRemoveMembersMessage($members))
-            return $response
-        }catch{
-            Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
-            return $null
+        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), $this.GetRemoveMembersMessage($members)) )
+        {
+            try{
+                $this._endpoint.RemoveMembers( $this, $members ) | Out-Null
+                Write-PSFMessage -Level Output -Message ($this.GetRemoveMembersMessage($members))
+            }catch{
+                Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
+            }
         }
     }
 
@@ -125,16 +130,14 @@ Class Group : Entity
     }
 
     # Add Members
-    [PSObject] AddMembers($members)
+    [void] AddMembers($members)
     {
         try{
             
-            $response = $this._endpoint.AddMembers( $this, $members )
+            $this._endpoint.AddMembers( $this, $members ) | Out-Null
             Write-PSFMessage -Level Output -Message ($this.GetAddMembersMessage($members))
-            return $response
         }catch{
             Write-PSFMessage -Level Critical -Message ("Failed to Update Group '{0}' due to a staging error." -f ($this.GetName()))
-            return $null
         }
     }
     
@@ -146,15 +149,15 @@ Class Group : Entity
         return $this.Name
     }
 
-    [PSObject] Save(){
-        return $this.Save(
+    [void] Save(){
+        $this.Save(
             "Group '{0}' has been saved." -f $this.GetNumber(),
             "Failed to save Group: '{0}'" -f $this.GetNumber()
         )
     }
 
-    [PSObject] Update($PropertyPath, $CSVValue){
-        return $this.Save(
+    [void] Update($PropertyPath, $CSVValue){
+        $this.Save(
             "Group '{0}' has been updated." -f $this.GetNumber(),
             "Failed to update Group: '{0}'" -f $this.GetNumber()
         )

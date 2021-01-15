@@ -49,17 +49,14 @@ Class ExtensionFactory : EntityFactory
         }else{
             return $false
         }
-        
-        #$payload = @{"id" = $id}
-        #$responseObject = $this._endpoint.set($payload)
-        #return [Extension]::new($responseObject, $this._endpoint)
     }
 
-    # Create extension as new object
+    # Create an empty extension as new object
     [Extension] makeExtension()
     {
         $responseObject = $this._endpoint.New()
         return [Extension]::new($responseObject, $this._endpoint)
+        #return [Extension]::new(@{'IsNew'=$true}, $this._endpoint)
     
     }
 

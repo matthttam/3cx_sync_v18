@@ -16,6 +16,11 @@ Class Hotdesking : Entity
         $this.SetName($object.FirstName._value)
     }
 
+    [string] GetIdentifier(){
+        $fields = $($this.GetName(), $this.GetModel(), $this.GetMacAddress(), $this.GetObjectID())
+        return ('Hotdesking Name: {0}, Model: {1}, Mac: {2} ObjectID: {3}' -f $fields)
+    }
+
     # Sets/Gets MacAddress
     [void] SetMacAddress($MacAddress){
         $this.MacAddress = $MacAddress
@@ -40,18 +45,16 @@ Class Hotdesking : Entity
         return $this.Name
     }
 
-    [PSObject] Save(){
-        return $this.Save(
+    [void] Save(){
+        $this.Save(
             "Hotdesk '{0}' has been saved." -f $this.GetNumber(),
             "Failed to save Hotdesk: '{0}'" -f $this.GetNumber()
         )
     }
 
-    [psobject] Update([array] $arguments)
+    [void] Update([array] $arguments)
     {
         Write-PSFMessage -Level Error -Message ("Update called on hotdesking entity '{0}'. Update is not yet implemented and cannot be used on a Hotdesk extension." -f $this.MacAddress)
-        return $false
     }
-        
 
 }
