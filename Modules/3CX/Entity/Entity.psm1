@@ -7,6 +7,7 @@ Class Entity
     [string] $id
     [boolean] $Dirty = $false
     [boolean] $New = $false
+    [boolean] $Deleted = $false
     [hashtable] $DirtyProperties = @{}
     $object
 
@@ -24,6 +25,19 @@ Class Entity
 
     [string] GetObjectID(){
         return $this.GetObjectValue('id')
+    }
+
+    # Attempts to run 
+    [PSObject] Get([string] $Key){
+        #$command = '$this.' + $Key + '()'
+        try{          
+            #return (Invoke-Expression -Command $command)
+            return $this.object.$Key._value
+        }catch{
+            Write-Error ('Failed to get value of key {0} from object: {1} ' -f $Key, $PSItem.Exception.Message) -ErrorAction Stop
+            return $false
+        }
+        
     }
     
     # Return appropriate selected values based on type
@@ -58,9 +72,15 @@ Class Entity
     }
 	
 	[string] GetObjectValuePropertyName($attributeInfo){
-		if($attributeInfo -is [string] -or $attributeInfo -is [int64] -or $attributeInfo -is [boolean]){
+        # If it is a basic type, nothing to drill down to
+        if($attributeInfo -is [string] -or $attributeInfo -is [int64] -or $attributeInfo -is [boolean]){
             return ''
-		}
+        }
+        # If it is Object type or Type is missing, nothing to drill down to
+        if($attributeInfo.Type -in ([ValueType]::Object) -or  $null -eq ($attributeInfo | Get-Member -name 'type')){
+            return ''
+        }
+        # Check if it needs selected or _value
 		if($attributeInfo.Type -in ([ValueType]::Enum, [ValueType]::File, [ValueType]::ItemSet)){
             return 'selected'
         }else{
@@ -103,10 +123,8 @@ Class Entity
         return $payload
     }
 
-    [void] SetDirty(){
-        $this.SetDirty($true)
-    }
     # Sets/Gets Dirty flag
+    [void] SetDirty(){ $this.SetDirty($true) }
     [void] SetDirty( [boolean] $value )
     {
         $this.Dirty = $value
@@ -121,6 +139,24 @@ Class Entity
     {
         return ($this.GetDirty() -eq $true)
     }
+
+    # Sets/Gets Deleted flag
+    [void] SetDeleted(){ $this.SetDeleted($true) }
+    [void] SetDeleted( [boolean] $value )
+    {
+        $this.Deleted = $value
+    }
+    [boolean] GetDeleted()
+    {
+        return $this.Deleted
+    }
+
+    # Returns if object is dirty true/false
+    [boolean] IsDeleted()
+    {
+        return ($this.GetDeleted() -eq $true)
+    }
+
 
     # Sets/Gets ID
     [void] SetID($id){
@@ -219,8 +255,10 @@ Class Entity
     }
     
     # Saves the current entity via the api
+    # Calls set
     [void] Save($SuccessMessage = "An entity has been saved.", $FailMessage = "Failed to save an entity.")
     {
+        $this.Set()
         $this.CommitStagedUpdates()
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Save') ){
             try{
@@ -233,8 +271,8 @@ Class Entity
     }
 
     # Perform update commands on all staged updates
+    # Assumes set has already been called
     [void] CommitStagedUpdates(){
-        $this.Set()
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'CommitStagedUpdates') ){
             try{
                 foreach($key in $this.GetDirtyProperties().keys ){

@@ -80,4 +80,12 @@ Class Endpoint
         return $this.FormatResponse( $response, $options)
     }
 
+    [PSObject] Delete($entity) { return ($this.Delete($entity, @{})) }
+    [PSObject] Delete($entity, $options){
+        $response = $this.APIConnection.post('delete', @{'Body' = ($entity.Id | ConvertTo-Json )})
+        $entity.SetDirty($false);
+        $entity.SetDeleted($true);
+        return $this.FormatResponse( $response, $options)
+    }
+
 }

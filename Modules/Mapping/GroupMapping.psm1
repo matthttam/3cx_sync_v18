@@ -1,11 +1,11 @@
 Using module .\Mapping.psm1
 
-class ExtensionMapping : Mapping
+class GroupMapping : Mapping
 {
 
     [hashtable]$ParsedMapping = @{}
 
-    ExtensionMapping([PSCustomObject] $mapping) : base($mapping)
+    GroupMapping([PSCustomObject] $mapping) : base($mapping)
     {
         $this.SetParsedMapping($this.ParseMapping($mapping))
     }

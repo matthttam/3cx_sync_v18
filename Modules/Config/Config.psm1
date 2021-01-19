@@ -163,4 +163,20 @@ class Config
         }
         return $true
     }
+
+    # Apply Thresholds to a list of objects
+    [void] ApplyThresholds($Name, $ObjectsToChange, $TotalCount, $ExceededMessage, $CanceledMessage){
+        # Are we removing any extensions?
+        if($this.HasThreshold($Name) -and $ObjectsToChange.length -gt 0){
+            # Are we exceeding our threshold?
+            if($this.IsOverThreshold($Name, $ObjectsToChange.length, $TotalCount)){
+                Write-PSFMessage -Level Critical -Message ($ExceededMessage)
+                # Reset each extension that would have been disabled
+                foreach($Object in $ObjectsToChange){
+                    Write-PSFMessage -Level Critical -Message ($CanceledMessage -f $Object.GetIdentifier())
+                    $Object.CancelUpdate()
+                }
+            }
+        }
+    }
 }

@@ -6,7 +6,7 @@ class GroupMembershipMapping : Mapping
     #[hashtable]$ParsedConfig = @{}
     [PSCustomObject]$Mapping
 
-    GroupMembershipMapping([PSCustomObject] $config) : base($config)
+    GroupMembershipMapping([PSCustomObject] $mapping) : base($mapping)
     {
     }
 

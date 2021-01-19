@@ -6,6 +6,7 @@ Class Group : Entity
     [GroupListEndpoint] $_endpoint
     [String] $Name
     [Hashtable] $Members = @{}
+    [Hashtable] $DirtyMembers = @{}
     
 
     Group($object, $endpoint) : base($object, $endpoint)
@@ -18,6 +19,13 @@ Class Group : Entity
         return ('Group Name: {0}, ObjectID: {1}' -f $this.GetName(), $this.GetObjectID())
     }
 
+    # Check Membership
+    [void] StageMembershipUpdates($Members){
+        $MemberNumbersToAdd = $Members | Where-Object { $_.Number -NotIn $this.Members.Selected.Number._value}
+        $MembersToAdd = $MemberNumbersToAdd
+        $MembersToDelete = $this.Members.Selected | Where-Object {$_.Number._value -NotIn $Members.Number}
+
+    }
     # Alias for QueryPosisbleValues()
     [PSObject] QueryAllPossibleValues()
     {
@@ -32,7 +40,6 @@ Class Group : Entity
 
     # Searches by Number
     # Returns only the item by its Number or Null
-
     [PSObject] QueryPossibleValuesByNumber([string] $search)
     {
         $results = $this.QueryPossibleValues($search)
@@ -159,12 +166,35 @@ Class Group : Entity
         return $this.Name
     }
 
-    [void] Save(){
-        $this.Save(
-            "Group '{0}' has been saved." -f $this.GetNumber(),
-            "Failed to save Group: '{0}'" -f $this.GetNumber()
+    [void] Set(){
+        $this.Set(
+            "Group '{0}' has been set." -f $this.GetIdentifier(),
+            "Failed to set Group: '{0}'" -f $this.GetIdentifier()
         )
     }
+
+    [void] Save(){
+        $this.Save(
+            "Group '{0}' has been saved." -f $this.GetIdentifier(),
+            "Failed to save Group: '{0}'" -f $this.GetIdentifier()
+        )
+    }
+
+    # Override Entity Save since group doesn't yet support staged updates
+    # Saves the current entity via the api
+    [void] Save($SuccessMessage, $FailMessage)
+    {
+        #$this.CommitStagedUpdates()
+        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Save') ){
+            try{
+                $this._endpoint.Save( $this ) | Out-Null
+                Write-PSFMessage -Level Output -Message ($SuccessMessage)
+            }catch{
+                Write-PSFMessage -Level Critical -Message ($FailMessage)
+            }
+        }
+    }
+
 
     [void] Update($PropertyPath, $CSVValue){
         $this.Save(

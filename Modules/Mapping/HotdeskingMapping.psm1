@@ -6,16 +6,16 @@ class HotdeskingMapping : Mapping
     # Hashtable HotdeskingMapping CSV Headers to an array of Objects containing API Names
     [hashtable]$ParsedConfig = @{}
 
-    HotdeskingMapping([PSCustomObject] $config) : base($config)
+    HotdeskingMapping([PSCustomObject] $mapping) : base($mapping)
     {
-        $this.ParseConfig($config)
+        $this.ParseMapping($mapping)
     }
 
-    [void] ParseConfig([PSCustomObject] $config)
+    [void] ParseMapping([PSCustomObject] $mapping)
     {
-        $APIPaths = Get-Member -InputObject $config -MemberType Properties | Select-Object -ExpandProperty "Name"
+        $APIPaths = Get-Member -InputObject $mapping -MemberType Properties | Select-Object -ExpandProperty "Name"
         foreach($APIPath in $APIPaths){
-            $this.ParsedConfig.($config.$APIPath) = $APIPath
+            $this.ParsedConfig.($mapping.$APIPath) = $APIPath
         }
     }
 

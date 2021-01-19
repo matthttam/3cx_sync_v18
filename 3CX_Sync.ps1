@@ -16,7 +16,12 @@ Param(
     [Switch] $NoExtensions,         # Do not create or update extensions
     [Switch] $NoNewExtensions,      # Do not create extensions
     [Switch] $NoUpdateExtensions,   # Do not update extensions
-    [Alias("NoGroups")]
+
+    [Switch] $NoGroups,             # Do not create or update any group
+    [Switch] $NoNewGroups,          # Do not create extensions
+    [Switch] $NoUpdateGroups,       # Do not update extensions
+
+    [Alias("NoGroupMembers")]
     [Switch] $NoGroupMemberships,   # Do not adjust any group memberships
     [Switch] $NoHotdesking,         # Do not create or update hotdesking
     [Switch] $NoNewHotdesking,      # Do not create hotdesking
@@ -110,7 +115,6 @@ if(-NOT $NoExtensions){
                 # Populate this extension with extended fields by setting it in 3CX
                 $CurrentExtension.Set()
 
-                #$UpdateRequired = $false
                 foreach($CSVHeader in $UpdateMappingCSVKeys)
                 {
                     # Get the matched Extension Property Values
@@ -129,7 +133,7 @@ if(-NOT $NoExtensions){
                                 $CurrentExtension.StageUpdate($ExtensionPropertyValues, $CSVValue)
                                 Write-PSFMessage -Level Output -Message (("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue)))
                         }catch{
-                            Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Extension '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($row.$CSVNumberHeader, $CSVHeader))
+                            Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Extension '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($CurrentExtensionNumber, $CSVHeader))
                             continue
                         }
                     }
@@ -164,50 +168,174 @@ if(-NOT $NoExtensions){
         }
     }
     
-    # Get a list of all dirty extensions that need to be saved at this point.
-    $ExtensionsToUpdate = $Extensions | Where-Object { $_.IsDirty() -eq $true }
-    
     if(-NOT $force){
-        # Count the number of extensions that are primed to be disabled
-        $ExtensionsToDisable = $Extensions | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True }
-        # Count the number of extensions that will be added
-        $ExtensionsToAdd = $Extensions | Where-Object {$_.IsNew() -eq $true }
-        # The CSV file will contain the number of extensions that will be or remain active
-        $CountOfActiveExtensions = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
-
         $Thresholds = @(
-            @{
-            'Name' = 'Remove'
-            'ExceededMessage' = "Threshold for disabling extensions exceeded. Some extensions will not be updated. Count of Extensions to be Disabled: {0} Count of all active extensions in import file {1}" -f $ExtensionsToDisable.length, $CountOfActiveExtensions
-            'CanceledMessage' = 'Update canceled for Extension Number {0}'
-            },
-            @{
-                'Name' = 'Add'
-                'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be updated. Count of Extensions to be Added: {0} Count of all active extensions in import file {1}" -f $ExtensionsToAdd.length, $CountOfActiveExtensions
-                'CanceledMessage' = 'Update canceled for Extension Number {0}'
-            }
-        )
-        foreach( $Threshold in $Thresholds){
-            # Are we removing any extensions?
-            if($ExtensionConfig.HasThreshold($Threshold.Name) -and $ExtensionsToDisable.length -gt 0){
-                # Are we exceeding our threshold?
-                if($ExtensionConfig.IsOverThreshold($Threshold.Name, $ExtensionsToDisable.length, $CountOfActiveExtensions)){
-                    Write-PSFMessage -Level Critical -Message ($Threshold.ExceededMessage)
-                    # Reset each extension that would have been disabled
-                    foreach($Extension in $ExtensionsToDisable){
-                        Write-PSFMessage -Level Critical -Message ($Threshold.CanceledMessage -f $Extension.GetNumber())
-                        $Extension.CancelUpdate()
-                    }
+                @{
+                    'Name' = 'Disable'
+                    'ExceededMessage' = "Threshold for disabling extensions exceeded. Some extensions will not be updated."
+                    'CanceledMessage' = 'Update canceled for Extension {0}'
+                    'ObjectsToChange' = ($Extensions | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True } )
+                    'TotalCount' = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
+                },
+                @{
+                    'Name' = 'Add'
+                    'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be updated."
+                    'CanceledMessage' = 'Update canceled for Extension {0}'
+                    'ObjectsToChange' = $Extensions | Where-Object {$_.IsNew() -eq $true }
+                    'TotalCount' = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
                 }
-            }
+            )
+        foreach( $Threshold in $Thresholds){
+            $ExtensionConfig.ApplyThresholds($Threshold.Name, $Threshold.ObjectsToChange, $Threshold.TotalCount, $Threshold.ExceededMessage, $Threshold.CanceledMessage);
         }
     }else{
-        Write-PSFMessage -Level Output -Message ''
+        Write-PSFMessage -Level Output -Message 'Force option used, skipping threshold checks'
     }
+
+    # Get a list of all dirty extensions that need to be saved at this point.
+    $ExtensionsToUpdate = $Extensions | Where-Object { $_.IsDirty() -eq $true }
 
     foreach($Extension in $ExtensionsToUpdate){
         if($Extension.IsDirty()){
             $Extension.save()
+        }
+    }
+}
+
+# Update Groups
+if(-NOT $NoGroups){
+    ## Import Config\Mapping.json > Extension
+    $GroupConfig = [GroupConfig]::New($MappingPath)
+
+    $NewMapping = $GroupConfig.Mapping.New
+    $UpdateMapping = $GroupConfig.Mapping.Update
+    $GroupKeyHeader = $GroupConfig.GetKey()
+ 
+    ## Import Extension CSV File
+    try
+    {
+        $GroupImportCSV = [CSV]::New($GroupConfig.GetCSVPath())
+        
+        #Verify ImportData isn't Empty
+        if(-not $GroupImportCSV.Data.Count -gt 0){
+            Write-Error 'Import File is Empty' -ErrorAction Stop
+        }
+    }
+    catch
+    {
+        Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+    }
+
+    # Initialize ExtensionFactory
+    $GroupFactory = [GroupFactory]::new($3CXApiConnection)
+
+    # Get A List of Extensions
+    try{
+        $Groups = [Collections.ArrayList] $GroupFactory.GetGroups()
+    } catch {
+        Write-Error ('Failed to Look Up Group List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
+    }
+
+    $UpdateMappingCSVKeys = $UpdateMapping.GetMappingCSVKeys()
+    $NewMappingCSVKeys = $NewMapping.GetMappingCSVKeys()
+
+    # Loop over CSV
+    foreach ($row in $GroupImportCSV.Data) {
+        # If the row's CurrentGroupKey does exist in the groups list, Update
+        $CurrentGroupKey = $row.$GroupKeyHeader
+
+        # If this extension number exists in 3CX
+        if($CurrentGroupKey -in ($Groups | ForEach-Object {$_.Get($GroupKeyHeader)}) ){
+            if($NoUpdateGroups -eq $false){
+                # Pull current extension object from the array
+                $CurrentGroup = $Groups | Where-Object { $_.Get($GroupKeyHeader) -eq $CurrentGroupKey }
+                
+                # Populate this extension with extended fields by setting it in 3CX
+                $CurrentGroup.Set()
+
+                foreach($CSVHeader in $UpdateMappingCSVKeys)
+                {
+                    # Get the matched Extension Property Values
+                    $GroupPropertyValues = $UpdateMapping.GetParsedMappingValues($CSVHeader)
+
+                    # Convert the CSV Value using the attribute info from the current extension for this property
+                    $CSVValue = $UpdateMapping.ConvertToType( $row.$CSVHeader, $CurrentGroup.GetObjectAttributeInfo($GroupPropertyValues) )
+                    
+                    # Get current extension value based on path in Mapping File for this CSV header
+                    $CurrentGroupValue = $CurrentGroup.GetObjectValue($GroupPropertyValues)
+                    
+                    # If the real extension and the CSVValue are different, queue for change
+                    if( $CurrentGroupValue -ne $CSVValue)
+                    {
+                        try{
+                                $CurrentGroup.StageUpdate($GroupPropertyValues, $CSVValue)
+                                Write-PSFMessage -Level Output -Message (("Staged Update to Group '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentGroupKey, $CSVHeader, $CurrentGroupValue, $CSVValue)))
+                        }catch{
+                            Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Group '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($CurrentGroupKey, $CSVHeader))
+                            continue
+                        }
+                    }
+                }
+            }
+
+        # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
+        }else{
+            if($NoNewGroups -eq $false){
+                Write-Verbose ("Need to Create Group: '{0}'" -f $CurrentGroupNumber)
+
+                # Begin building new extension
+                try{
+                    $NewGroup = $ExtensionFactory.makeExtension()
+                }catch {
+                    Write-PSFMessage -Level Critical -Message ("Failed to Stage Creation of New Group '{0}' due to an unexpected error." -f ($CurrentGroupKey))
+                    continue
+                }
+
+                foreach( $CSVHeader in $NewMappingCSVKeys)
+                {
+                    $NewGroupValueAttributeInfo = $NewGroup.GetObjectAttributeInfo($NewMapping.GetParsedMappingValues($CSVHeader))
+                    $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewGroupValueAttributeInfo )
+
+                    $message = ("Staged update to new group '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentGroupKey, $CSVHeader, $CSVValue))
+                    $NewGroup.StageUpdate($NewMapping.GetParsedMappingValues($CSVHeader) , $CSVValue)
+                    Write-PSFMessage -Level Output -Message ($message)
+                    
+                }
+                $Groups.Add($NewGroup)
+            }
+        }
+    }
+
+    if(-NOT $force){
+        $Thresholds = @(
+                @{
+                    'Name' = 'Delete'
+                    'ExceededMessage' = "Threshold for deleting groups exceeded. Some groups will not be deleted."
+                    'CanceledMessage' = 'Update canceled for group {0}'
+                    'ObjectsToChange' = ($Groups | Where-Object { $_.DirtyProperties.keys -contains 'Disabled' -and $_.DirtyProperties.Disabled.NewValue -eq $True } )
+                    'TotalCount' = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
+                },
+                @{
+                    'Name' = 'Add'
+                    'ExceededMessage' = "Threshold for adding groups exceeded. Some groups will not be added."
+                    'CanceledMessage' = 'Update canceled for group {0}'
+                    'ObjectsToChange' = $Extensions | Where-Object {$_.IsNew() -eq $true }
+                    'TotalCount' = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
+                }
+            )
+        foreach( $Threshold in $Thresholds){
+            $ExtensionConfig.ApplyThresholds($Threshold.Name, $Threshold.ObjectsToChange, $Threshold.TotalCount, $Threshold.ExceededMessage, $Threshold.CanceledMessage);
+        }
+    }else{
+        Write-PSFMessage -Level Output -Message 'Force option used, skipping threshold checks'
+    }
+
+    # Get a list of all dirty extensions that need to be saved at this point.
+    $GroupsToUpdate = $GroupsToUpdate | Where-Object { $_.IsDirty() -eq $true }
+
+    foreach($Group in $GroupsToUpdate){
+        if($Group.IsDirty()){
+            $Group.save()
         }
     }
 }
@@ -250,6 +378,11 @@ if(-NOT $NoGroupMemberships){
             $ExtensionsToAdd = @()
             $ExtensionsToRemove = @()
 
+            $CSVGroupMembers = $GroupMembershipImportCSV.Data | Where-Object {$GroupMembershipMapping.EvaluateConditions($GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $_) }
+            #$CurrentGroup.StageMembershipUpdates($CSVGroupMembers)
+
+
+
         # Loop over CSV Data and determine what extensions should be added or removed from this group
         foreach( $row in $GroupMembershipImportCSV.Data ){
             # Determine Proper Extensions in Group
@@ -280,28 +413,27 @@ if(-NOT $NoGroupMemberships){
                     }
                 }
             }
+        }
+        $ExtensionsToRemove = $CachedSelected
 
-            $ExtensionsToRemove = $CachedSelected
+        # If there are extensions to add
+        if($ExtensionsToAdd.count -gt 0)
+        {
+            # Stage Adding Members
+            $CurrentGroup.AddMembers($ExtensionsToAdd);
+        }
 
-            # If there are extensions to add
-            if($ExtensionsToAdd.count -gt 0)
-            {
-                # Stage Adding Members
-                $CurrentGroup.AddMembers($ExtensionsToAdd);
-            }
+        # If there are extensions to remove
+        if($ExtensionsToRemove.count -gt 0)
+        {
+            # Stage Removing Members
+            $CurrentGroup.RemoveMembers($ExtensionsToRemove);
+        }
 
-            # If there are extensions to remove
-            if($ExtensionsToRemove.count -gt 0)
-            {
-                # Stage Removing Members
-                $CurrentGroup.RemoveMembers($ExtensionsToRemove);
-            }
-
-            # Check if current group is dirty first
-            if($CurrentGroup.IsDirty())
-            {
-                $CurrentGroup.Save()
-            }
+        # Check if current group is dirty first
+        if($CurrentGroup.IsDirty())
+        {
+            $CurrentGroup.Save()
         }
     }
 }

@@ -8,7 +8,7 @@ class ValueType {
     static [string] $Item = 9 #13?
     static [string] $ItemSet = 13 #9?
     static [string] $TimeRanges = 6
-
+    static [string] $Object = 20 #Not really sure what to call this
     ValueType([PSCustomObject] $config)
     {
         
