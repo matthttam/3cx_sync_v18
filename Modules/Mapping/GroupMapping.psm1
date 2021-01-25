@@ -7,7 +7,7 @@ class GroupMapping : Mapping
 
     GroupMapping([PSCustomObject] $mapping) : base($mapping)
     {
-        $this.SetParsedMapping($this.ParseMapping($mapping))
+        #$this.SetParsedMapping($this.ParseMapping($mapping))
     }
 
 }

@@ -79,7 +79,7 @@ class Mapping
     # Default parse mapping function which expands each name from a New/Update mapping
     # and splits them by the period to build a property path that 3CX would understand
     # The key for each of these is the CSV header of the mapped field
-    [hashtable] ParseMapping([PSCustomObject] $mapping)
+    <#[hashtable] ParseMapping([PSCustomObject] $mapping)
     {
         $return = [hashtable] @{}
         $APIPaths = Get-Member -InputObject $mapping -MemberType Properties | Select-Object -ExpandProperty "Name"
@@ -93,7 +93,7 @@ class Mapping
             #$return.($this.GetCSVHeader($mapping.$Path)) = $PropertyPath
         }
         return $return
-    }
+    }#>
     
     [void] SetParsedMapping($Mapping){
         $this.ParsedMapping = $Mapping

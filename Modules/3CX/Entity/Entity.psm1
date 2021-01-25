@@ -25,15 +25,9 @@ Class Entity
         return ('Entity ID: {0}, EditID: {1}' -f $this.GetID(), $this.GetEditID())
     }
 
-    #[string] GetObjectID(){
-    #    return $this.GetObjectValue('ID')
-    #}
-
-    # Attempts to run 
+    # Attempts to return a key's value from the object
     [PSObject] Get([string] $Key){
-        #$command = '$this.' + $Key + '()'
         try{          
-            #return (Invoke-Expression -Command $command)
             return $this.object.$Key._value
         }catch{
             Write-Error ('Failed to get value of key {0} from object: {1} ' -f $Key, $PSItem.Exception.Message) -ErrorAction Stop
@@ -104,7 +98,6 @@ Class Entity
         }else{
             return $false
         }
-        #if( $object.$p1.type -in ( [ValueType]::Collection, [ValueType]::Item ) ) {
         if($p2){
                 return $this.GetObjectAttributeInfo($p2, $object.$p1._value)
         }
@@ -169,7 +162,6 @@ Class Entity
     {
         return ($this.GetDeleted() -eq $true)
     }
-
 
     # Sets/Gets ID
     [void] SetID($ID){
@@ -243,9 +235,6 @@ Class Entity
     [PSObject] GetDirtyProperties([string] $key){
         return ( $this.GetDirtyProperties() )[$key]
     }
-    #[PSObject] GetDirtyPropertiesType([string] $key){
-    #    return ( $this.GetDirtyProperties() )[$key].Type
-    #}
     [PSObject] GetDirtyPropertiesNewValue([string] $key){
         return ( $this.GetDirtyProperties() )[$key].NewValue
     }
@@ -311,7 +300,6 @@ Class Entity
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'CommitStagedUpdates') ){
             try{
                 foreach($key in $this.GetDirtyProperties().keys ){
-                    $this.GetDirtyProperties($key)
                     foreach($Value in $this.GetDirtyPropertiesNewValue($key)){
                         $this.Update($this.GetDirtyPropertiesPropertyPath($key), $Value) | Out-Null
                     }
@@ -324,14 +312,14 @@ Class Entity
     }
 
     # Perform an update command
-    [void] Update($PropertyPath, $CSVValue){
-        Update($PropertyPath, $CSVValue, "An entity has been staged to update.", "Failed to stage an entity for update.")
+    [void] Update($PropertyPath, $Value){
+        Update($PropertyPath, $Value, "An entity has been staged to update.", "Failed to stage an entity for update.")
     }
-    [void] Update($PropertyPath, $CSVValue, $SuccessMessage, $FailMessage)
+    [void] Update($PropertyPath, $Value, $SuccessMessage, $FailMessage)
     {
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Update') ){
             try{
-                $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $CSVValue)) | Out-Null
+                $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $Value)) | Out-Null
                 Write-PSFMessage -Level Output -Message ($SuccessMessage)
             }catch{
                 Write-PSFMessage -Level Critical -Message ($FailMessage)

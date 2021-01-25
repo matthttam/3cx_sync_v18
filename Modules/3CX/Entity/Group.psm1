@@ -23,6 +23,15 @@ Class Group : Entity
         return $this.QueryPossibleValues("")
     }
 
+    [PSObject] QueryPossibleValuesByNumber([array] $search)
+    {
+        $return = [Collections.ArrayList] @()
+        foreach($s in $search){
+            $return += $this.QueryPossibleValuesByNumber($s)
+        }
+        return $return
+    }
+
     # Searches by Number
     # Returns only the item by its Number or Null
     [PSObject] QueryPossibleValuesByNumber([string] $search)
@@ -89,15 +98,6 @@ Class Group : Entity
             $this.object.Members.selected = $this.QueryAllMembers()
         }
         return $this.object.Members.selected
-        #if($null -eq $this.Members.selected){
-        #    $this.Members = @{}
-        #}
-        <#if( $null -eq $this.Members.selected ){
-            $this.Members.selected = $this.QueryAllMembers()
-            # Update actual object
-            $this.object.Members.selected = $this.Members.selected
-        }
-        return $this.Members.selected#>
     }
 
     # Return by number a specific member from the Members Selected attribute
@@ -178,29 +178,28 @@ Class Group : Entity
         )
     }
 
-   #[void] CommitStagedUpdates(){
-    #    if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'CommitStagedUpdates') ){
-            
-   #     }
-    #}
-    # Override Entity Save since group doesn't yet support staged updates
-    # Saves the current entity via the api
-    <#[void] Save($SuccessMessage, $FailMessage)
-    {
-        #$this.CommitStagedUpdates()
-        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Save') ){
-            try{
-                $this._endpoint.Save( $this ) | Out-Null
-                Write-PSFMessage -Level Output -Message ($SuccessMessage)
-            }catch{
-                Write-PSFMessage -Level Critical -Message ($FailMessage)
+    # Need to run some in-time code to get the appropriate IDs
+   [void] CommitStagedUpdates(){
+       if($this.GetDirtyProperties().keys -contains 'Members'){
+           foreach( $MemberStagedUpdate in $this.DirtyProperties['Members']){
+               $MemberStagedUpdate
+           }
+       }
+        foreach($key in $this.GetDirtyProperties().keys ){
+
+        }
+        ([Entity]$this).CommitStagedUpdates()
+    }
+
+    [void] Update($PropertyPath, $Value){
+        # For membership, convert the Number itself to the actual ID (is different for each SET command)
+        if($PropertyPath -eq 'Members'){
+            foreach($key in $Value.keys){
+                $Value.$key.Ids = @($this.QueryPossibleValuesByNumber($Value[$key].Ids).Id)
             }
         }
-    }#>
 
-
-    [void] Update($PropertyPath, $CSVValue){
-        $this.Update($PropertyPath, $CSVValue,
+        $this.Update($PropertyPath, $Value,
             "Group '{0}' has been updated." -f $this.GetIdentifier(),
             "Failed to update Group: '{0}'" -f $this.GetIdentifier()
         )
@@ -210,30 +209,21 @@ Class Group : Entity
     [void] StageUpdate([Array] $PropertyValues, $Value){
         # If PropertyValues is @('Members')
         if($null -eq (Compare-Object $PropertyValues @('Members'))){
-            # Return any numbers that shoudl be added
-            $MembersToAdd = $Value | Where-Object { $_.Number -NotIn ($this.GetMembersSelected()).Number._value}
-            
-            # Convert the numbers into a list of IDs
-            $MembersToAdd = $MembersToAdd | ForEach-Object { $this.QueryPossibleValuesByNumber($_.Number) } | Select-Object -ExpandProperty Id
-
-            $MembersToDelete = $this.GetMembersSelected() | Where-Object {$_.Number._value -NotIn $Value.Number} | Select-Object -ExpandProperty Id
+            # Return any numbers that should be added
+            $MemberNumbersToAdd = ($Value | Where-Object { $_.Number -NotIn ($this.GetMembersSelected()).Number._value}).Number
+            $MemberNumbersToDelete = ($this.GetMembersSelected() | Where-Object {$_.Number._value -NotIn $Value.Number} ).Number
             $Value = [Collections.ArrayList] @()
-            if($MembersToAdd){
-                $Value += @{'Add' = @{"Ids" = @($MembersToAdd); "IsAllSelected" = $false; "Search" = ""}}
+            if($MemberNumbersToAdd){
+                $Value += @{'Add' = @{"Ids" = @($MemberNumbersToAdd); "IsAllSelected" = $false; "Search" = ""}}
             }
-            if($MembersToDelete){
-                $Value += @{'Delete' = @{"Ids" = @($MembersToDelete); "IsAllSelected" = $false; "Search" = ""}}
+            if($MemberNumbersToDelete){
+                $Value += @{'Delete' = @{"Ids" = @($MemberNumbersToDelete); "IsAllSelected" = $false; "Search" = ""}}
             }
             if($Value.count -eq 0){
                 return
             }
         }
         ([Entity]$this).StageUpdate($PropertyValues, $Value)
-
- #       $value = @{'PropertyPath' = $PropertyValues; 'OldValue' = $this.GetObjectValue($PropertyValues); 'NewValue' = $CSVValue}
- #       $this.AddDirtyProperties( ($PropertyValues -join '.') , $value)
- #       $this.SetObjectValue($PropertyValues, $CSVValue)
- #       $this.SetDirty()
     }
 
 

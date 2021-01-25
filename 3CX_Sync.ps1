@@ -388,54 +388,6 @@ if(-NOT $NoGroupMemberships){
         {
             $CurrentGroup.Save()
         }
-
-<#
-        # Loop over CSV Data and determine what extensions should be added or removed from this group
-        foreach( $row in $GroupMembershipImportCSV.Data ){
-            # Determine Proper Extensions in Group
-            if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $row) ){
-                # True or false based on if the row exists
-                $FoundSelected = $CurrentGroup.GetMembersSelectedByNumber($row.Number)
-                if(-NOT $FoundSelected){
-                    $FoundSelected = $false
-                }
-                #$FoundSelected = ( ($CurrentGroup.GetSelectedByNumber($row.Number) ), $false -ne $null)[0]
-
-                # If this Number is Selected Already
-                if( $FoundSelected ){
-                    $CachedSelected.Remove($FoundSelected) # Remove that number from the list
-                    Continue
-                }else{
-                    # Ensure this number is a possible value
-                    $FoundPossibleValue = $CurrentGroup.QueryPossibleValuesByNumber($row.Number)
-                    if($FoundPossibleValue){
-                        # Add the found value to $ExtensionsToAdd if not already in it
-                        if( $ExtensionsToAdd -NotContains $FoundPossibleValue ){
-                            $ExtensionsToAdd += $FoundPossibleValue  
-                        }
-                    }else{
-                        # If not show a warning
-                        Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $row.Number, $CurrentGroup.object.Name._value)
-                        continue;
-                    }
-                }
-            }
-        }
-        $ExtensionsToRemove = $CachedSelected
-
-        # If there are extensions to add
-        if($ExtensionsToAdd.count -gt 0)
-        {
-            # Stage Adding Members
-            $CurrentGroup.AddMembers($ExtensionsToAdd);
-        }
-
-        # If there are extensions to remove
-        if($ExtensionsToRemove.count -gt 0)
-        {
-            # Stage Removing Members
-            $CurrentGroup.RemoveMembers($ExtensionsToRemove);
-        }#>
     }
 }
 
