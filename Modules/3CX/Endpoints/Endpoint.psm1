@@ -75,14 +75,21 @@ Class Endpoint
     [PSObject] Save($entity) { return ($this.Save($entity, @{})) }
     [PSObject] Save($entity, $options)
     {
-        $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.Id | ConvertTo-Json )})
+        $response = $this.APIConnection.post('edit/save', @{'Body' = ($entity.GetEditID() | ConvertTo-Json )})
+        $entity.SetDirty($false);
+        return $this.FormatResponse( $response, $options)
+    }
+
+    [PSObject] Cancel($entity) { return ($this.Cancel($entity, @{})) }
+    [PSObject] Cancel($entity, $options){
+        $response = $this.APIConnection.post('delete', @{'Body' = ($entity.GetID() | ConvertTo-Json )})
         $entity.SetDirty($false);
         return $this.FormatResponse( $response, $options)
     }
 
     [PSObject] Delete($entity) { return ($this.Delete($entity, @{})) }
     [PSObject] Delete($entity, $options){
-        $response = $this.APIConnection.post('delete', @{'Body' = ($entity.Id | ConvertTo-Json )})
+        $response = $this.APIConnection.post('delete', @{'Body' = ($entity.GetID() | ConvertTo-Json )})
         $entity.SetDirty($false);
         $entity.SetDeleted($true);
         return $this.FormatResponse( $response, $options)

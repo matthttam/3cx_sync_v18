@@ -4,7 +4,9 @@ Using module ..\ValueType.psm1
 Class Entity
 {
     [Endpoint] $_endpoint
-    [string] $id
+    [string] $ID # ID Used to set the object to be edited
+    [string] $EditID # References the changed object. Used to read properties of object and save.
+    [string] $ObjectID # Used to modify underlying values of an entity
     [boolean] $Dirty = $false
     [boolean] $New = $false
     [boolean] $Deleted = $false
@@ -13,19 +15,19 @@ Class Entity
 
     Entity($object, $endpoint)
     {
-        $this.SetID($object.id)
+        $this.SetID($object.ID)
         $this.SetEndpoint($endpoint)
         $this.SetObject($object)
         $this.SetNew($this.GetObject().IsNew -eq $true)
     }
 
     [string] GetIdentifier(){
-        return ('Entity ID: {0}, ObjectID: {1}' -f $this.GetID(), $this.GetObjectID())
+        return ('Entity ID: {0}, EditID: {1}' -f $this.GetID(), $this.GetEditID())
     }
 
-    [string] GetObjectID(){
-        return $this.GetObjectValue('id')
-    }
+    #[string] GetObjectID(){
+    #    return $this.GetObjectValue('ID')
+    #}
 
     # Attempts to run 
     [PSObject] Get([string] $Key){
@@ -112,13 +114,24 @@ Class Entity
     }
 
     # Functions used to convert CSV information for updates
-    [hashtable] GetUpdatePayload( $PropertyPath, $CSVDataValue ){
+    [hashtable] GetUpdatePayload( $PropertyPath, $Value ){
+        $FormattedPropertyPath = [Collections.ArrayList] @()
+        foreach($Path in $PropertyPath.Split('.') ){
+            $FormattedPath = @{'Name' = $Path}
+            $AttributeInfo = $this.GetObjectAttributeInfo($Path)
+            if($AttributeInfo.type -eq [ValueType]::Collection){
+                $FormattedPath.IdInCollection = $AttributeInfo._value[$Value.CollectionIndex]
+                # A collection index will need to be set somehow to handle collections
+            }
+            $FormattedPropertyPath += $FormattedPath
+        }
+        
         $payload = @{
             "Path" = @{
-                "ObjectId" = $this.id
-                "PropertyPath" = $PropertyPath
+                "ObjectId" = $this.GetEditID()
+                "PropertyPath" = $FormattedPropertyPath
             }
-            "PropertyValue" = $CSVDataValue
+            "PropertyValue" = $Value
         }
         return $payload
     }
@@ -159,14 +172,27 @@ Class Entity
 
 
     # Sets/Gets ID
-    [void] SetID($id){
-        $this.id = $id
+    [void] SetID($ID){
+        $this.ID = $ID
     }
     [string] GetID(){
-        return $this.id
+        return $this.ID
     }
-    [void] SetObjectId($id){
 
+    # Sets/Gets SaveID (Used for save)
+    [void] SetEditID($ID){
+        $this.EditID = $ID
+    }
+    [string] GetEditID(){
+        return $this.EditID
+    }
+
+    # Sets/Gets ObjectID (Used for update commands)
+    [void] SetObjectID($ID){
+        $this.ObjectID = $ID
+    }
+    [string] GetObjectID(){
+        return $this.ObjectID
     }
 
     # Sets/Gets Endpoint
@@ -183,6 +209,9 @@ Class Entity
             $this.object = $object.ActiveObject
         }else{
             $this.object = $object
+        }
+        if($this.object.id){
+            $this.SetObjectId($This.object.id)
         }
     }
     [PSObject] GetObject(){
@@ -214,14 +243,17 @@ Class Entity
     [PSObject] GetDirtyProperties([string] $key){
         return ( $this.GetDirtyProperties() )[$key]
     }
+    #[PSObject] GetDirtyPropertiesType([string] $key){
+    #    return ( $this.GetDirtyProperties() )[$key].Type
+    #}
     [PSObject] GetDirtyPropertiesNewValue([string] $key){
-        return ( $this.GetDirtyProperties() )[$key]['NewValue']
+        return ( $this.GetDirtyProperties() )[$key].NewValue
     }
     [PSObject] GetDirtyPropertiesOldValue($key){
-        return ( $this.GetDirtyProperties() )[$key]['OldValue']
+        return ( $this.GetDirtyProperties() )[$key].OldValue
     }
     [Array] GetDirtyPropertiesPropertyPath($key){
-        return ( $this.GetDirtyProperties() )[$key]['PropertyPath']
+        return ( $this.GetDirtyProperties() )[$key].PropertyPath
     }
     [void] AddDirtyProperties($key, $value){
         if($this.DirtyProperties.keys -contains $key){
@@ -242,9 +274,12 @@ Class Entity
             if($this.IsNew()){
                 $response = $this._endpoint.New()
                 $this.SetID($response.Id)
-                $this.SetObjectValue('id', $response.ActiveObject.id)
+                $this.SetObjectValue('Id', $response.ActiveObject.Id)
             }else{
-                $response = $this._endpoint.set( @{"id" = $this.GetID()} )
+                $response = $this._endpoint.set( @{"Id" = $this.GetID()} )
+                if($response.Id){
+                    $this.SetEditID($response.Id)
+                }
                 $this.SetObject( $response )
             }
             
@@ -276,7 +311,10 @@ Class Entity
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'CommitStagedUpdates') ){
             try{
                 foreach($key in $this.GetDirtyProperties().keys ){
-                    $this.Update($this.GetDirtyPropertiesPropertyPath($key), $this.GetDirtyPropertiesNewValue($key)) | Out-Null
+                    $this.GetDirtyProperties($key)
+                    foreach($Value in $this.GetDirtyPropertiesNewValue($key)){
+                        $this.Update($this.GetDirtyPropertiesPropertyPath($key), $Value) | Out-Null
+                    }
                 }
             $this.ClearDirtyProperties()
             }catch{
@@ -301,21 +339,27 @@ Class Entity
         }
     }
 
+    #[void] StageUpdate([Array] $PropertyValues, $CSVValue){
+    #    StageUpdate([Array] $PropertyValues, $CSVValue, $null)
+    #}
     # Stage an update on this object
-    [void] StageUpdate([Array] $PropertyValues, $CSVValue){
-        $value = @{'PropertyPath' = $PropertyValues; 'OldValue' = $this.GetObjectValue($PropertyValues); 'NewValue' = $CSVValue}
+    [void] StageUpdate([Array] $PropertyValues, $Value){
+        # If the property passed is of an object type then we need to store things differently
+        #if($this.GetObjectAttributeInfo($PropertyValues).type -eq [ValueType]::Object){
+        #    $value = @{'PropertyPath' = $PropertyValues; 'Type' = 'Array'; 'Action' = $action; 'Value' = $Value}
+        #}else{
+        $value = @{'PropertyPath' = $PropertyValues; 'OldValue' = $this.GetObjectValue($PropertyValues); 'NewValue' = $Value}
+        if( -NOT $this.GetObjectValue($PropertyValues).type -eq [ValueType]::Object ){
+            $this.SetObjectValue($PropertyValues, $Value)
+        }
         $this.AddDirtyProperties( ($PropertyValues -join '.') , $value)
-        $this.SetObjectValue($PropertyValues, $CSVValue)
         $this.SetDirty()
     }
 
     # Clears all staged updates and resets the object
-    [void] CancelUpdate(){
-        foreach($PropertyValues in $this.DirtyProperties.Keys){
-            $this.SetObjectValue( $PropertyValues.Split('.'), $this.DirtyProperties.$PropertyValues.OldValue )
-        }
+    [void] Cancel(){
+        $this._endpoint.Cancel()
         $this.ClearDirtyProperties()
-        $this.DirtyProperties = @{}
     }
 
 }

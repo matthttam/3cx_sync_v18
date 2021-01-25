@@ -12,7 +12,7 @@ Class Extension : Entity
     }
 
     [string] GetIdentifier(){
-        return ('Extension Number: {0}, ObjectID: {1}' -f $this.GetNumber(), $this.GetObjectID())
+        return ('Extension Number: {0}, EditID: {1}' -f $this.GetNumber(), $this.GetEditID())
     }
     # Sets/Gets Number
     # For a non-set object number will be stored in $this.number
@@ -47,7 +47,7 @@ Class Extension : Entity
     }
 
     [void] Update($PropertyPath, $CSVValue){
-        $this.Save(
+        $this.Update($PropertyPath, $CSVValue,
             "Extension '{0}' has been updated." -f $this.GetNumber(),
             "Failed to update Extension: '{0}'" -f $this.GetNumber()
         )

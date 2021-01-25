@@ -12,7 +12,7 @@ Class GroupListEndpoint : Endpoint
     {
         $payload = @{
             "Path" = @{
-                "ObjectId" = $group.Id
+                "ObjectId" = $group.GetEditID()
                 "PropertyPath" = @(@{"Name" = "Members"})
             }
             "State" = $state
@@ -33,7 +33,7 @@ Class GroupListEndpoint : Endpoint
     {
         $payload = @{
             "Path" = @{
-                "ObjectId" = $group.Id
+                "ObjectId" = $group.GetEditID()
                 "PropertyPath" = @(@{"Name" = "Members"})
             }
             "PropertyValue" = @{"State" = $state}
@@ -47,11 +47,12 @@ Class GroupListEndpoint : Endpoint
         
         return $Members
     }
-
+<#
+    [PSObject] RemoveMembers($group, $members){ return ($this.AddMembers($group, $members, @{})) }
     [PSObject] RemoveMembers( $group, $members )
     {
         $payload = $this.GetPayloadBody()
-        $payload.Path.ObjectId = $group.Id
+        $payload.Path.ObjectId = $group.GetEditID()
         $payload.Path.PropertyPath += @{"Name" = "Members"}
         $payload.PropertyValue = @{"Delete" = @{"Ids" = @($members.Id); "IsAllSelected" = $false; "Search" = ""}}
         $response = $this.Update($payload)
@@ -59,25 +60,31 @@ Class GroupListEndpoint : Endpoint
         return $response 
     }
 
-    [PSObject] AddMembers( $group, $members )
+    [PSObject] UpdateMembers($group, $action, $members){ return ($this.AddMembers($group, $members, @{})) }
+    [PSObject] UpdateMembers( $group, $action, $members, $options )
     {
-        $payload = $this.GetPayloadBody()
-        $payload.Path.ObjectId = $group.Id
-        $payload.Path.PropertyPath += @{"Name" = "Members"}
-        $payload.PropertyValue = @{"Add" = @{"Ids" = @($members.Id); "IsAllSelected" = $false; "Search" = ""}}
+        $payload = @{
+            "Path" = @{
+                "ObjectId" = $group.GetEditID()
+                "PropertyPath" = @(
+                    @{"Name" = "Members"}
+                    )
+            }
+            "PropertyValue" = @{$action = @{"Ids" = @($members); "IsAllSelected" = $false; "Search" = ""}}
+        }
         $response = $this.Update($payload)
         $group.SetDirty($true)
-        return $response 
-    }
+        return $this.FormatResponse( $response, $options)
+    }#>
 
-    [Hashtable] GetPayloadBody()
-    {
-        return @{
-            "Path" = @{
-                "ObjectId" = ""
-                "PropertyPath" = @()
-            }
-            "PropertyValue" = @{}
-        }
-    }
+    #[Hashtable] GetPayloadBody()
+    #{
+    #    return @{
+    #        "Path" = @{
+    #            "ObjectId" = ""
+    #            "PropertyPath" = @()
+    #        }
+    #        "PropertyValue" = @{}
+    #    }
+    #}
 }

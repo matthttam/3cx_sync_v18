@@ -31,16 +31,10 @@ Class GroupFactory : EntityFactory
     }
 
     # Make group based off an object
-    #[Group] makeGroup([PSObject] $object)
-    #{
-    #    return [Group]::new($object, $this._endpoint)
-    #}
-
-    # Make group based off an object
     [Group] makeGroup([PSObject] $object)
     {
-        return $this.makeGroup($object.id)
-        #return [Group]::new($object, $this._endpoint)
+        #return $this.makeGroup($object.id)
+        return [Group]::new($object, $this._endpoint)
     }
 
     # If a 32 bit integer is passed convert to 64 bit.

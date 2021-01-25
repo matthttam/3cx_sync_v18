@@ -4,6 +4,7 @@ Using module .\Modules\CSV\CSV.psm1
 
 Using module .\Modules\Config\ConnectionConfig.psm1
 Using module .\Modules\Config\ExtensionConfig.psm1
+Using module .\Modules\Config\GroupConfig.psm1
 Using module .\Modules\Config\GroupMembershipConfig.psm1
 Using module .\Modules\Config\HotdeskingConfig.psm1
 
@@ -373,22 +374,28 @@ if(-NOT $NoGroupMemberships){
     }
     
     foreach( $CurrentGroup in $Groups ){
-            # Currently Selected Extensions that will be widdled down as we find them in the CSV
-            $CachedSelected = [Collections.ArrayList] ($CurrentGroup.GetSelected())
-            $ExtensionsToAdd = @()
-            $ExtensionsToRemove = @()
+        # Currently Selected Extensions that will be widdled down as we find them in the CSV
+        #$CachedSelected = [Collections.ArrayList] ($CurrentGroup.GetMembersSelected())
+        #$ExtensionsToAdd = @()
+        #$ExtensionsToRemove = @()
 
-            $CSVGroupMembers = $GroupMembershipImportCSV.Data | Where-Object {$GroupMembershipMapping.EvaluateConditions($GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $_) }
-            #$CurrentGroup.StageMembershipUpdates($CSVGroupMembers)
+        $CSVGroupMembers = $GroupMembershipImportCSV.Data | Where-Object {$GroupMembershipMapping.EvaluateConditions($GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $_) }
+        #$CurrentGroup.StageMembershipUpdates($CSVGroupMembers)
+        $CurrentGroup.StageUpdate(@('Members'), $CSVGroupMembers)
 
+        # If the current group is dirty, save the changes
+        if($CurrentGroup.IsDirty())
+        {
+            $CurrentGroup.Save()
+        }
 
-
+<#
         # Loop over CSV Data and determine what extensions should be added or removed from this group
         foreach( $row in $GroupMembershipImportCSV.Data ){
             # Determine Proper Extensions in Group
             if($GroupMembershipMapping.EvaluateConditions( $GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $row) ){
                 # True or false based on if the row exists
-                $FoundSelected = $CurrentGroup.GetSelectedByNumber($row.Number)
+                $FoundSelected = $CurrentGroup.GetMembersSelectedByNumber($row.Number)
                 if(-NOT $FoundSelected){
                     $FoundSelected = $false
                 }
@@ -428,13 +435,7 @@ if(-NOT $NoGroupMemberships){
         {
             # Stage Removing Members
             $CurrentGroup.RemoveMembers($ExtensionsToRemove);
-        }
-
-        # Check if current group is dirty first
-        if($CurrentGroup.IsDirty())
-        {
-            $CurrentGroup.Save()
-        }
+        }#>
     }
 }
 
@@ -495,37 +496,36 @@ if( -NOT $NoHotdesking){
             
             # Loop over values that need to be set
             foreach( $CSVHeader in $NewMapping.GetMappingCSVKeys())
+            {
+                if($NewMapping.GetApiPath($CSVHeader) -in $HotdeskingCreationInfo.Keys )
                 {
-                    if($NewMapping.GetApiPath($CSVHeader) -in $HotdeskingCreationInfo.Keys )
-                    {
-                        continue;
-                    } 
+                    continue;
+                } 
 
-                    $CSVValue = $NewMapping.ExtractValueByCSVHeader($CSVHeader, $row)
-                    $message = ("Staged update to new hotdesking '{0}',  for field '{1}'. Value: '{2}'" -f ($newHotdesking.GetName(), $CSVHeader, $CSVValue))
-                    try {
-                        if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
-                        {
-                            $HotdeskingEndpoint.Update($newHotdesking, $NewMapping.GetApiPath($CSVHeader), $CSVValue ) | Out-Null
-                            Write-PSFMessage -Level Output -Message ($message)
-                        }
-                    } catch {
-                        Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($HotdeskingCreationInfo.MacAddress))
-                        continue
-                    }
-                }
+                $CSVValue = $NewMapping.ExtractValueByCSVHeader($CSVHeader, $row)
+                $message = ("Staged update to new hotdesking '{0}',  for field '{1}'. Value: '{2}'" -f ($newHotdesking.GetName(), $CSVHeader, $CSVValue))
                 try {
-                    $message = ("Created Hotdesking: '{0}', '{1}', '{2}" -f $newHotdesking.GetName(), $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model)
                     if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
                     {
-                        $newHotdesking.Save() | Out-Null
+                        $HotdeskingEndpoint.Update($newHotdesking, $NewMapping.GetApiPath($CSVHeader), $CSVValue ) | Out-Null
                         Write-PSFMessage -Level Output -Message ($message)
                     }
+                } catch {
+                    Write-PSFMessage -Level Critical -Message ("Failed to Create Extension '{0}' due to a staging error on update parameters." -f ($HotdeskingCreationInfo.MacAddress))
+                    continue
                 }
-                catch {
-                    Write-PSFMessage -Level Critical -Message ("Failed to Create Hotdesk: '{0}'" -f $row.$CSVNumberHeader)
+            }
+            try {
+                $message = ("Created Hotdesking: '{0}', '{1}', '{2}" -f $newHotdesking.GetName(), $HotdeskingCreationInfo.MacAddress, $HotdeskingCreationInfo.Model)
+                if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))
+                {
+                    $newHotdesking.Save() | Out-Null
+                    Write-PSFMessage -Level Output -Message ($message)
                 }
-
+            }
+            catch {
+                Write-PSFMessage -Level Critical -Message ("Failed to Create Hotdesk: '{0}'" -f $row.$CSVNumberHeader)
+            }
         }
     }
 

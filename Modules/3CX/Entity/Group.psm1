@@ -1,38 +1,23 @@
 Using module .\Entity.psm1
 Using module ..\Endpoints\GroupListEndpoint.psm1
 
+[string]$LastSetID
 Class Group : Entity
 {
     [GroupListEndpoint] $_endpoint
     [String] $Name
-    [Hashtable] $Members = @{}
-    [Hashtable] $DirtyMembers = @{}
-    
 
     Group($object, $endpoint) : base($object, $endpoint)
     {
-        $this.SetName($this.object.Name._value)
-        $this.Members.Selected = $this.QueryAllMembers()
+        $this.SetName($object.Name)
     }
 
     [string] GetIdentifier(){
-        return ('Group Name: {0}, ObjectID: {1}' -f $this.GetName(), $this.GetObjectID())
+        return ('Group Name: {0}, ID: {1}' -f $this.GetName(), $this.GetID())
     }
-
-    # Check Membership
-    [void] StageMembershipUpdates($Members){
-        $MemberNumbersToAdd = $Members | Where-Object { $_.Number -NotIn $this.Members.Selected.Number._value}
-        $MembersToAdd = $MemberNumbersToAdd
-        $MembersToDelete = $this.Members.Selected | Where-Object {$_.Number._value -NotIn $Members.Number}
-
-    }
-    # Alias for QueryPosisbleValues()
-    [PSObject] QueryAllPossibleValues()
-    {
-        return $this.QueryPossibleValues()
-    }
-
+    
     # Query for all possible values by calling QueryPossibelValues with empty search
+    [PSObject] QueryAllPossibleValues(){ return $this.QueryPossibleValues() }
     [PSObject] QueryPossibleValues()
     {
         return $this.QueryPossibleValues("")
@@ -46,6 +31,7 @@ Class Group : Entity
         $return = $results | Where-Object -filterScript {$_.Number._value -eq "$search"}
         if(-NOT $return){
             $return = $false
+            Write-PSFMessage -Level Warning -Message ('Extension Number {0} not valid for group {1}' -f $search, $this.GetIdentifier() )
         }
         return $return
     }
@@ -62,12 +48,8 @@ Class Group : Entity
         return $this._endpoint.QueryPossibleValues( $this, $state )
     }
 
-    # Alias for QueryMembers
-    [PSObject] QueryAllMembers()
-    {
-        return $this.QueryMembers()
-    }
     # Query for all selected members by calling QueryPOssibelValues with empty search
+    [PSObject] QueryAllMembers(){ return $this.QueryMembers() }    
     [PSObject] QueryMembers()
     {
         return $this.QueryMembers("")
@@ -98,15 +80,30 @@ Class Group : Entity
     }
 
     # Return Members Selected attribute from this object (populated on creation)
-    [PSObject] GetSelected()
+    [PSObject] GetMembersSelected()
     {
-        return $this.Members.selected
+        # If the group hasn't populated all selected members
+        # Determined by comparing the count of Members and count of Members.selected
+        if($this.object.Members.count -eq 0 -or $this.object.Members.count -ne $this.object.Members.selected.count){
+            $this.set()
+            $this.object.Members.selected = $this.QueryAllMembers()
+        }
+        return $this.object.Members.selected
+        #if($null -eq $this.Members.selected){
+        #    $this.Members = @{}
+        #}
+        <#if( $null -eq $this.Members.selected ){
+            $this.Members.selected = $this.QueryAllMembers()
+            # Update actual object
+            $this.object.Members.selected = $this.Members.selected
+        }
+        return $this.Members.selected#>
     }
 
     # Return by number a specific member from the Members Selected attribute
-    [PSObject] GetSelectedByNumber($number)
+    [PSObject] GetMembersSelectedByNumber($number)
     {
-        return $this.Members.selected | Where-Object -FilterScript {$_.Number._value -eq (""+$number)}
+        return $this.GetMembersSelected() | Where-Object -FilterScript {$_.Number._value -eq (""+$number)}
     }
 
     # Return string of message to use when members are removed.
@@ -167,6 +164,7 @@ Class Group : Entity
     }
 
     [void] Set(){
+        $script:LastSetID = $this.GetID()
         $this.Set(
             "Group '{0}' has been set." -f $this.GetIdentifier(),
             "Failed to set Group: '{0}'" -f $this.GetIdentifier()
@@ -180,9 +178,14 @@ Class Group : Entity
         )
     }
 
+   #[void] CommitStagedUpdates(){
+    #    if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'CommitStagedUpdates') ){
+            
+   #     }
+    #}
     # Override Entity Save since group doesn't yet support staged updates
     # Saves the current entity via the api
-    [void] Save($SuccessMessage, $FailMessage)
+    <#[void] Save($SuccessMessage, $FailMessage)
     {
         #$this.CommitStagedUpdates()
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Save') ){
@@ -193,14 +196,46 @@ Class Group : Entity
                 Write-PSFMessage -Level Critical -Message ($FailMessage)
             }
         }
-    }
+    }#>
 
 
     [void] Update($PropertyPath, $CSVValue){
-        $this.Save(
-            "Group '{0}' has been updated." -f $this.GetNumber(),
-            "Failed to update Group: '{0}'" -f $this.GetNumber()
+        $this.Update($PropertyPath, $CSVValue,
+            "Group '{0}' has been updated." -f $this.GetIdentifier(),
+            "Failed to update Group: '{0}'" -f $this.GetIdentifier()
         )
     }
+
+    # Stage an update on this object
+    [void] StageUpdate([Array] $PropertyValues, $Value){
+        # If PropertyValues is @('Members')
+        if($null -eq (Compare-Object $PropertyValues @('Members'))){
+            # Return any numbers that shoudl be added
+            $MembersToAdd = $Value | Where-Object { $_.Number -NotIn ($this.GetMembersSelected()).Number._value}
+            
+            # Convert the numbers into a list of IDs
+            $MembersToAdd = $MembersToAdd | ForEach-Object { $this.QueryPossibleValuesByNumber($_.Number) } | Select-Object -ExpandProperty Id
+
+            $MembersToDelete = $this.GetMembersSelected() | Where-Object {$_.Number._value -NotIn $Value.Number} | Select-Object -ExpandProperty Id
+            $Value = [Collections.ArrayList] @()
+            if($MembersToAdd){
+                $Value += @{'Add' = @{"Ids" = @($MembersToAdd); "IsAllSelected" = $false; "Search" = ""}}
+            }
+            if($MembersToDelete){
+                $Value += @{'Delete' = @{"Ids" = @($MembersToDelete); "IsAllSelected" = $false; "Search" = ""}}
+            }
+            if($Value.count -eq 0){
+                return
+            }
+        }
+        ([Entity]$this).StageUpdate($PropertyValues, $Value)
+
+ #       $value = @{'PropertyPath' = $PropertyValues; 'OldValue' = $this.GetObjectValue($PropertyValues); 'NewValue' = $CSVValue}
+ #       $this.AddDirtyProperties( ($PropertyValues -join '.') , $value)
+ #       $this.SetObjectValue($PropertyValues, $CSVValue)
+ #       $this.SetDirty()
+    }
+
+
 
 }
