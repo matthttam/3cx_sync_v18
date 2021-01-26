@@ -99,8 +99,8 @@ if(-NOT $NoExtensions){
         Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
     }
 
-    $UpdateMappingCSVKeys = $UpdateMapping.GetMappingCSVKeys()
-    $NewMappingCSVKeys = $NewMapping.GetMappingCSVKeys()
+    $UpdateMappingCSVKeys = $UpdateMapping.GetCSVHeaders()
+    $NewMappingCSVKeys = $NewMapping.GetCSVHeaders()
 
     # Loop over CSV
     foreach ($row in $ExtensionImportCSV.Data) {
@@ -156,11 +156,11 @@ if(-NOT $NoExtensions){
 
                 foreach( $CSVHeader in $NewMappingCSVKeys)
                 {
-                    $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetParsedMappingValues($CSVHeader))
+                    $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
 
                     $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
-                    $NewExtension.StageUpdate($NewMapping.GetParsedMappingValues($CSVHeader) , $CSVValue)
+                    $NewExtension.StageUpdate($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
                     Write-PSFMessage -Level Output -Message ($message)
                     
                 }
@@ -454,7 +454,7 @@ if( -NOT $NoHotdesking){
                     continue;
                 } 
 
-                $CSVValue = $NewMapping.ExtractValueByCSVHeader($CSVHeader, $row)
+                $CSVValue = $row.$CSVHeader
                 $message = ("Staged update to new hotdesking '{0}',  for field '{1}'. Value: '{2}'" -f ($newHotdesking.GetName(), $CSVHeader, $CSVValue))
                 try {
                     if ($PSCmdlet.ShouldProcess($HotdeskingCreationInfo.MacAddress, $message))

@@ -51,7 +51,7 @@ class Config
 
     # Sets/Gets Config of Config Data
     [void] SetConfig([string] $FullPath){
-        $JsonFile = (Get-Content -Path $FullPath) | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+        $JsonFile = (Get-Content -Path $FullPath) | ConvertFrom-Json -Depth 10 -ErrorAction Stop -AsHashtable
         if($this.ConfigNode){
             $this.Config = $JsonFile.($this.ConfigNode)
         }else{
@@ -107,18 +107,12 @@ class Config
 
     [void] VerifyRequiredFields( [array]$RequiredFields )
     {
-        $ConfigProperties = Get-Member -InputObject $this.config -MemberType Properties | Select-Object -ExpandProperty "Name"
-        $ComparisonDifference = Compare-Object -ReferenceObject $ConfigProperties -DifferenceObject $RequiredFields
-        $MissingProperties = $ComparisonDifference | Where-Object sideIndicator -eq '=>' | Select-Object -ExpandProperty 'InputObject'
+        $MissingProperties = $RequiredFields | Where-Object {$this.config.keys -NOTcontains $_}
         
-        $NodeMessage = ""
-        if($this.GetConfigNode()){
-            $NodeMessage = ' node "{0}" ' -f $this.GetConfigNode()
-        }
         if($MissingProperties){
-            throw [System.Configuration.ConfigurationException]::new('Config file "{0}" {1} located in "{2}" missing required settings: {3}' -f ($this.GetFilename(), $this.GetPath(), $NodeMessage, ($MissingProperties -join ', ')))
+            throw [System.Configuration.ConfigurationException]::new('Config file "{0}" located at "{2}" missing required settings: {3}' -f ($this.GetFilename(), $this.GetPath(), ($MissingProperties -join ', ')))
         }else{
-            Write-Verbose('Verification of Required Fields of {0} {1} successful' -f $this.Filename, $NodeMessage)
+            Write-Verbose('Verification of the required fields of {0} successful.' -f $this.Filename)
         }
     }
 

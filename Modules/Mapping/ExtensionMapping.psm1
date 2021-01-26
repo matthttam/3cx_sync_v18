@@ -7,7 +7,7 @@ class ExtensionMapping : Mapping
 
     ExtensionMapping([PSCustomObject] $mapping) : base($mapping)
     {
-        E$this.SetParsedMapping($this.ParseMapping($mapping))
+        #$this.SetParsedMapping($this.ParseMapping($mapping))
     }
 
 }

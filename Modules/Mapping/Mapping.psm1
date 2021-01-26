@@ -4,10 +4,10 @@ Using module ..\3CX\ValueType.psm1
 class Mapping
 {
     # Hashtable mapping CSV Headers to an array of Objects containing API Names
-    [PSCustomObject] $Mapping
+    [Hashtable] $Mapping
     
 
-    Mapping([PSCustomObject] $mapping)
+    Mapping([Hashtable] $mapping)
     {
         $this.SetMapping($mapping)
     }
@@ -20,8 +20,31 @@ class Mapping
         return $this.mapping
     }
 
-    [array] GetCSVHeaders(){
-        return @($this.mapping.PSObject.Properties | Select-Object -ExpandProperty 'Value')
+    # Return the CSV value associated with the string APIPath
+    [String] ExtractValueByAPIPath( [String] $ApiPath, [PSCustomObject] $row )
+    {
+        $CSVHeader = $this.GetCSVHeaderByAPIPath( $ApiPath )
+        return $row.$CSVHeader;
+    }
+
+    # Get CSV Header based on API Mapping
+    [String] GetCSVHeaderByAPIPath( $ApiPath )
+    {
+        return $this.mapping.$ApiPath
+    }
+
+    [String] GetAPIPathByCSVHeader( $CSVHeader ){
+        return $this.mapping.getEnumerator() | Where-Object {$_.Value -eq "$CSVHeader"} | Select-Object -ExpandProperty 'Name'
+    }
+
+    [array] GetAPIPaths()
+    {
+        return $this.mapping.keys
+    }
+
+    [array] GetCSVHeaders()
+    {
+        return $this.mapping.values
     }
 
     # Convert a value to the type specified from an attributeInfo
@@ -60,26 +83,11 @@ class Mapping
         }
     }
 
-    # Return the CSV associated with the string APIPath
-    [String] ExtractValueByAPIPath( [String] $ApiPath, [PSCustomObject] $row )
-    {
-        $CSVHeader = $this.GetCSVHeader( $ApiPath )
-        return $this.ExtractValueByCSVHeader( $CSVHeader, $row )
-    }
-    [String] ExtractValueByCSVHeader( [String] $CSVHeader, [PSCustomObject]  $row )
-    {
-        return $row.$CSVHeader;
-    }
-
-    [String] GetCSVHeader( $ApiPath )
-    {
-        return $this.config.$ApiPath;
-    }
-
+    <#
     # Default parse mapping function which expands each name from a New/Update mapping
     # and splits them by the period to build a property path that 3CX would understand
     # The key for each of these is the CSV header of the mapped field
-    <#[hashtable] ParseMapping([PSCustomObject] $mapping)
+    [hashtable] ParseMapping([PSCustomObject] $mapping)
     {
         $return = [hashtable] @{}
         $APIPaths = Get-Member -InputObject $mapping -MemberType Properties | Select-Object -ExpandProperty "Name"
@@ -93,7 +101,7 @@ class Mapping
             #$return.($this.GetCSVHeader($mapping.$Path)) = $PropertyPath
         }
         return $return
-    }#>
+    }
     
     [void] SetParsedMapping($Mapping){
         $this.ParsedMapping = $Mapping
@@ -111,6 +119,7 @@ class Mapping
     {
         return @($this.GetParsedMappingKey($CSVHeaderValue).values)
     }
+    
 
     [array] GetMappingPathKeys()
     {
@@ -121,4 +130,5 @@ class Mapping
     {
         return @($this.Mapping.PSObject.Properties | Select-Object -ExpandProperty 'Value')
     }
+    #>
 }

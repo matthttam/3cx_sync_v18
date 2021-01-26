@@ -85,9 +85,9 @@ Class Entity
 	}
 
     # Return attributeInfo of a path from the object
-    [PSObject] GetObjectAttributeInfo($key)
+    [PSObject] GetObjectAttributeInfo([string] $key)
     {
-        return $this.GetObjectAttributeInfo($key, $this.object)
+        return $this.GetObjectAttributeInfo([string] $key, $this.object)
     }
     [PSObject] GetObjectAttributeInfo($key, $object)
     {
@@ -333,9 +333,6 @@ Class Entity
     # Stage an update on this object
     [void] StageUpdate([Array] $PropertyValues, $Value){
         # If the property passed is of an object type then we need to store things differently
-        #if($this.GetObjectAttributeInfo($PropertyValues).type -eq [ValueType]::Object){
-        #    $value = @{'PropertyPath' = $PropertyValues; 'Type' = 'Array'; 'Action' = $action; 'Value' = $Value}
-        #}else{
         $value = @{'PropertyPath' = $PropertyValues; 'OldValue' = $this.GetObjectValue($PropertyValues); 'NewValue' = $Value}
         if( -NOT $this.GetObjectValue($PropertyValues).type -eq [ValueType]::Object ){
             $this.SetObjectValue($PropertyValues, $Value)
