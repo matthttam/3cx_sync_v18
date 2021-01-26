@@ -182,7 +182,9 @@ Class Group : Entity
    [void] CommitStagedUpdates(){
        if($this.GetDirtyProperties().keys -contains 'Members'){
            foreach( $MemberStagedUpdate in $this.DirtyProperties['Members']){
-               $MemberStagedUpdate
+               foreach($key in $MemberStagedUpdate.keys){
+                    $MemberStagedUpdate.$key.Ids = @($this.QueryPossibleValuesByNumber($MemberStagedUpdate[$key].Ids).Id)
+                }
            }
        }
         foreach($key in $this.GetDirtyProperties().keys ){
@@ -191,22 +193,8 @@ Class Group : Entity
         ([Entity]$this).CommitStagedUpdates()
     }
 
-    [void] Update($PropertyPath, $Value){
-        # For membership, convert the Number itself to the actual ID (is different for each SET command)
-        if($PropertyPath -eq 'Members'){
-            foreach($key in $Value.keys){
-                $Value.$key.Ids = @($this.QueryPossibleValuesByNumber($Value[$key].Ids).Id)
-            }
-        }
-
-        $this.Update($PropertyPath, $Value,
-            "Group '{0}' has been updated." -f $this.GetIdentifier(),
-            "Failed to update Group: '{0}'" -f $this.GetIdentifier()
-        )
-    }
-
     # Stage an update on this object
-    [void] StageUpdate([Array] $PropertyValues, $Value){
+    [void] Update([Array] $PropertyValues, $Value){
         # If PropertyValues is @('Members')
         if($null -eq (Compare-Object $PropertyValues @('Members'))){
             # Return any numbers that should be added
@@ -223,7 +211,7 @@ Class Group : Entity
                 return
             }
         }
-        ([Entity]$this).StageUpdate($PropertyValues, $Value)
+        ([Entity]$this).Update($PropertyValues, $Value)
     }
 
 

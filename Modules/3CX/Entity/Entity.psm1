@@ -317,6 +317,24 @@ Class Entity
     }
     [void] Update($PropertyPath, $Value, $SuccessMessage, $FailMessage)
     {
+
+        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Update') ){
+            try{
+                $value = @{'PropertyPath' = $PropertyPath; 'OldValue' = $this.GetObjectValue($PropertyPath); 'NewValue' = $Value}
+                if( -NOT $this.GetObjectValue($PropertyPath).type -eq [ValueType]::Object ){
+                    $this.SetObjectValue($PropertyPath, $Value)
+                }
+                $this.AddDirtyProperties( ($PropertyPath -join '.') , $value)
+                $this.SetDirty()
+                Write-PSFMessage -Level Output -Message ($SuccessMessage)
+            }catch{
+                Write-PSFMessage -Level Critical -Message ($FailMessage)
+            }
+        }
+
+        # If the property passed is of an object type then we need to store things differently
+        
+        <#
         if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Update') ){
             try{
                 $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $Value)) | Out-Null
@@ -324,26 +342,20 @@ Class Entity
             }catch{
                 Write-PSFMessage -Level Critical -Message ($FailMessage)
             }
-        }
+        }#>
     }
 
     #[void] StageUpdate([Array] $PropertyValues, $CSVValue){
     #    StageUpdate([Array] $PropertyValues, $CSVValue, $null)
     #}
     # Stage an update on this object
-    [void] StageUpdate([Array] $PropertyValues, $Value){
-        # If the property passed is of an object type then we need to store things differently
-        $value = @{'PropertyPath' = $PropertyValues; 'OldValue' = $this.GetObjectValue($PropertyValues); 'NewValue' = $Value}
-        if( -NOT $this.GetObjectValue($PropertyValues).type -eq [ValueType]::Object ){
-            $this.SetObjectValue($PropertyValues, $Value)
-        }
-        $this.AddDirtyProperties( ($PropertyValues -join '.') , $value)
-        $this.SetDirty()
-    }
+    #[void] StageUpdate([Array] $PropertyValues, $Value){
+    #    
+    #}
 
     # Clears all staged updates and resets the object
     [void] Cancel(){
-        $this._endpoint.Cancel()
+        $this._endpoint.Cancel( $this )
         $this.ClearDirtyProperties()
     }
 

@@ -119,7 +119,7 @@ if(-NOT $NoExtensions){
                 foreach($CSVHeader in $UpdateMappingCSVKeys)
                 {
                     # Get the matched Extension Property Values
-                    $ExtensionPropertyValues = $UpdateMapping.GetParsedMappingValues($CSVHeader)
+                    $ExtensionPropertyValues = $UpdateMapping.GetAPIPathByCSVHeader($CSVHeader)
 
                     # Convert the CSV Value using the attribute info from the current extension for this property
                     $CSVValue = $UpdateMapping.ConvertToType( $row.$CSVHeader, $CurrentExtension.GetObjectAttributeInfo($ExtensionPropertyValues) )
@@ -131,7 +131,7 @@ if(-NOT $NoExtensions){
                     if( $CurrentExtensionValue -ne $CSVValue)
                     {
                         try{
-                                $CurrentExtension.StageUpdate($ExtensionPropertyValues, $CSVValue)
+                                $CurrentExtension.Update($ExtensionPropertyValues, $CSVValue)
                                 Write-PSFMessage -Level Output -Message (("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue)))
                         }catch{
                             Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Extension '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($CurrentExtensionNumber, $CSVHeader))
@@ -159,9 +159,9 @@ if(-NOT $NoExtensions){
                     $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
 
-                    $message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
-                    $NewExtension.StageUpdate($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
-                    Write-PSFMessage -Level Output -Message ($message)
+                    #$message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
+                    $NewExtension.Update($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
+                    #Write-PSFMessage -Level Output -Message ($message)
                     
                 }
                 $Extensions.Add($NewExtension)
@@ -257,7 +257,7 @@ if(-NOT $NoGroups){
                 foreach($CSVHeader in $UpdateMappingCSVKeys)
                 {
                     # Get the matched Extension Property Values
-                    $GroupPropertyValues = $UpdateMapping.GetParsedMappingValues($CSVHeader)
+                    $GroupPropertyValues = $UpdateMapping.GetAPIPathByCSVHeader($CSVHeader)
 
                     # Convert the CSV Value using the attribute info from the current extension for this property
                     $CSVValue = $UpdateMapping.ConvertToType( $row.$CSVHeader, $CurrentGroup.GetObjectAttributeInfo($GroupPropertyValues) )
@@ -269,7 +269,7 @@ if(-NOT $NoGroups){
                     if( $CurrentGroupValue -ne $CSVValue)
                     {
                         try{
-                                $CurrentGroup.StageUpdate($GroupPropertyValues, $CSVValue)
+                                $CurrentGroup.Update($GroupPropertyValues, $CSVValue)
                                 Write-PSFMessage -Level Output -Message (("Staged Update to Group '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentGroupKey, $CSVHeader, $CurrentGroupValue, $CSVValue)))
                         }catch{
                             Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Group '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($CurrentGroupKey, $CSVHeader))
@@ -294,11 +294,11 @@ if(-NOT $NoGroups){
 
                 foreach( $CSVHeader in $NewMappingCSVKeys)
                 {
-                    $NewGroupValueAttributeInfo = $NewGroup.GetObjectAttributeInfo($NewMapping.GetParsedMappingValues($CSVHeader))
+                    $NewGroupValueAttributeInfo = $NewGroup.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewGroupValueAttributeInfo )
 
                     $message = ("Staged update to new group '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentGroupKey, $CSVHeader, $CSVValue))
-                    $NewGroup.StageUpdate($NewMapping.GetParsedMappingValues($CSVHeader) , $CSVValue)
+                    $NewGroup.Update($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
                     Write-PSFMessage -Level Output -Message ($message)
                     
                 }
@@ -381,7 +381,7 @@ if(-NOT $NoGroupMemberships){
 
         $CSVGroupMembers = $GroupMembershipImportCSV.Data | Where-Object {$GroupMembershipMapping.EvaluateConditions($GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $_) }
         #$CurrentGroup.StageMembershipUpdates($CSVGroupMembers)
-        $CurrentGroup.StageUpdate(@('Members'), $CSVGroupMembers)
+        $CurrentGroup.Update(@('Members'), $CSVGroupMembers)
 
         # If the current group is dirty, save the changes
         if($CurrentGroup.IsDirty())

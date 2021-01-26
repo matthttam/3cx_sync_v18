@@ -82,7 +82,7 @@ Class Endpoint
 
     [PSObject] Cancel($entity) { return ($this.Cancel($entity, @{})) }
     [PSObject] Cancel($entity, $options){
-        $response = $this.APIConnection.post('delete', @{'Body' = ($entity.GetID() | ConvertTo-Json )})
+        $response = $this.APIConnection.post('edit/cancel', @{'Body' = ($entity.GetID() | ConvertTo-Json )})
         $entity.SetDirty($false);
         return $this.FormatResponse( $response, $options)
     }

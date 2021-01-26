@@ -168,7 +168,7 @@ class Config
                 # Reset each extension that would have been disabled
                 foreach($Object in $ObjectsToChange){
                     Write-PSFMessage -Level Critical -Message ($CanceledMessage -f $Object.GetIdentifier())
-                    $Object.CancelUpdate()
+                    $Object.Cancel()
                 }
             }
         }
