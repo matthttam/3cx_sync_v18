@@ -158,11 +158,7 @@ if(-NOT $NoExtensions){
                 {
                     $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
-
-                    #$message = ("Staged update to new extension '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentExtensionNumber, $CSVHeader, $CSVValue))
                     $NewExtension.Update($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
-                    #Write-PSFMessage -Level Output -Message ($message)
-                    
                 }
                 $Extensions.Add($NewExtension)
             }
