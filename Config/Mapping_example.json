@@ -1,7 +1,7 @@
 {
     "Extension": 
     {
-        "Path": "Import Files/3CX_Extensions.csv",
+        "CSVPath": "Import Files/3CX_Extensions.csv",
         "Threshold": 
                     {
                         "Add":false,
@@ -36,7 +36,7 @@
     },
     "GroupMembership": 
     {
-        "Path": "Import Files/3CX_Groups.csv",
+        "CSVPath": "Import Files/3CX_Groups.csv",
         "Groups":
         {
             "Sutton Elementary School":
