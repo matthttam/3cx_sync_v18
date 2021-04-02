@@ -2,16 +2,13 @@ Using module .\Mapping.psm1
 
 class GroupMembershipMapping : Mapping
 {
-    # Hashtable mapping CSV Headers to an array of Objects containing API Names
-    #[hashtable]$ParsedConfig = @{}
-    [PSCustomObject]$Mapping
 
     GroupMembershipMapping([PSCustomObject] $mapping) : base($mapping)
     {
     }
 
     [array] GetNames(){
-        return $this.Mapping | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
+        return $this.Mapping.Keys
     }
     
     [array] GetConditionsByGroupName($Name){

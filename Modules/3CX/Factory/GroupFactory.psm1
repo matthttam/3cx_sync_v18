@@ -42,7 +42,7 @@ Class GroupFactory : EntityFactory
     # Create group based on specific ID
     [Group] makeGroup([int64] $id)
     {
-        $payload = @{"id" = $id}
+        $payload = @{"id" = [int] $id}
         $responseObject = $this._endpoint.set($payload)
         return [Group]::new($responseObject, $this._endpoint)
     }

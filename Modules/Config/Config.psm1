@@ -53,6 +53,10 @@ class Config
     [void] SetConfig([string] $FullPath){
         $JsonFile = (Get-Content -Path $FullPath) | ConvertFrom-Json -Depth 10 -ErrorAction Stop -AsHashtable
         if($this.ConfigNode){
+            if($JsonFile.keys -NotContains $this.ConfigNode){
+                Write-PSFMessage -Level Critical -Message ("Config node " + $this.ConfigNode + " was not found in configuration file.")
+                throw [System.IO.FileFormatException]::new("Config node " + $this.ConfigNode + " was not found in configuration file.", $FullPath)
+            }
             $this.Config = $JsonFile.($this.ConfigNode)
         }else{
             $this.Config = $JsonFile
@@ -110,7 +114,7 @@ class Config
         $MissingProperties = $RequiredFields | Where-Object {$this.config.keys -NOTcontains $_}
         
         if($MissingProperties){
-            throw [System.Configuration.ConfigurationException]::new('Config file "{0}" located at "{2}" missing required settings: {3}' -f ($this.GetFilename(), $this.GetPath(), ($MissingProperties -join ', ')))
+            throw [System.Configuration.ConfigurationException]::new('Config file "{0}" located at "{1}" missing required settings: {2}' -f ($this.GetFilename(), $this.GetPath(), ($MissingProperties -join ', ')))
         }else{
             Write-Verbose('Verification of the required fields of {0} successful.' -f $this.Filename)
         }

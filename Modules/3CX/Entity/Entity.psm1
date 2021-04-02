@@ -106,6 +106,17 @@ Class Entity
         }
     }
 
+    [array] GetUpdatePayloads( $PropertyPath, $Values){
+        if($Values -isnot [array]){
+            $Values = ,$Values
+        }
+        $payloads = [Collections.ArrayList] @()
+        foreach($Value in $Values){
+            $payloads.add($this.GetUpdatePayload($PropertyPath, $Value))
+        }
+        return (,$payloads)
+    }
+
     # Functions used to convert CSV information for updates
     [hashtable] GetUpdatePayload( $PropertyPath, $Value ){
         $FormattedPropertyPath = [Collections.ArrayList] @()
@@ -265,8 +276,8 @@ Class Entity
                 $this.SetID($response.Id)
                 $this.SetObjectValue('Id', $response.ActiveObject.Id)
             }else{
-                $response = $this._endpoint.set( @{"Id" = $this.GetID()} )
-                if($response.Id){
+                $response = $this._endpoint.set( @{"Id" = [int] $this.GetID()} )
+                if($response.Id -and -not $this.GetEditID()){
                     $this.SetEditID($response.Id)
                 }
                 $this.SetObject( $response )
@@ -301,10 +312,12 @@ Class Entity
             try{
                 foreach($key in $this.GetDirtyProperties().keys ){
                     foreach($Value in $this.GetDirtyPropertiesNewValue($key)){
-                        $this.Update($this.GetDirtyPropertiesPropertyPath($key), $Value) | Out-Null
+                        foreach($payload in $this.GetUpdatePayloads( $this.GetDirtyPropertiesPropertyPath($key), $Value )){
+                            $this._endpoint.Update( $payload ) | Out-Null
+                        }
                     }
                 }
-            $this.ClearDirtyProperties()
+                $this.ClearDirtyProperties()
             }catch{
                 Write-PSFMessage -level Critical -Message ('An unexpected error has occured while writing staged updates to 3CX')
             }
@@ -313,14 +326,18 @@ Class Entity
 
     # Perform an update command
     [void] Update($PropertyPath, $Value){
-        Update($PropertyPath, $Value, "An entity has been staged to update.", "Failed to stage an entity for update.")
+        $this.Update($PropertyPath, $Value, "An entity has been staged to update.", "Failed to stage an entity for update.")
     }
     [void] Update($PropertyPath, $Value, $SuccessMessage, $FailMessage)
     {
+        $this.Update($PropertyPath, $Value, $SuccessMessage, $FailMessage, @{})
+    }
+    [void] Update($PropertyPath, $Value, $SuccessMessage, $FailMessage, $Info)
+    {
 
-        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Update') ){
+        if ( $PSCmdlet.ShouldProcess($SuccessMessage, $this.GetIdentifier(), 'Update') ){
             try{
-                $value = @{'PropertyPath' = $PropertyPath; 'OldValue' = $this.GetObjectValue($PropertyPath); 'NewValue' = $Value}
+                $value = @{'PropertyPath' = $PropertyPath; 'OldValue' = $this.GetObjectValue($PropertyPath); 'NewValue' = $Value; 'Info' = $Info}
                 if( -NOT $this.GetObjectValue($PropertyPath).type -eq [ValueType]::Object ){
                     $this.SetObjectValue($PropertyPath, $Value)
                 }
@@ -331,27 +348,7 @@ Class Entity
                 Write-PSFMessage -Level Critical -Message ($FailMessage)
             }
         }
-
-        # If the property passed is of an object type then we need to store things differently
-        
-        <#
-        if ( $PSCmdlet.ShouldProcess($this.GetIdentifier(), 'Update') ){
-            try{
-                $this._endpoint.Update($this.GetUpdatePayload($PropertyPath, $Value)) | Out-Null
-                Write-PSFMessage -Level Output -Message ($SuccessMessage)
-            }catch{
-                Write-PSFMessage -Level Critical -Message ($FailMessage)
-            }
-        }#>
     }
-
-    #[void] StageUpdate([Array] $PropertyValues, $CSVValue){
-    #    StageUpdate([Array] $PropertyValues, $CSVValue, $null)
-    #}
-    # Stage an update on this object
-    #[void] StageUpdate([Array] $PropertyValues, $Value){
-    #    
-    #}
 
     # Clears all staged updates and resets the object
     [void] Cancel(){

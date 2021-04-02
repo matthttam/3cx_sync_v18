@@ -37,6 +37,7 @@
     "GroupMembership": 
     {
         "CSVPath": "Import Files/3CX_Groups.csv",
+        "Key":  "Number",
         "Groups":
         {
             "Sutton Elementary School":

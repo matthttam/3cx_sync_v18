@@ -1,5 +1,6 @@
 Using module .\Entity.psm1
 Using module ..\Endpoints\GroupListEndpoint.psm1
+Using module ..\CopyObject.psm1
 
 [string]$LastSetID
 Class Group : Entity
@@ -105,7 +106,7 @@ Class Group : Entity
     {
         return $this.GetMembersSelected() | Where-Object -FilterScript {$_.Number._value -eq (""+$number)}
     }
-
+<#
     # Return string of message to use when members are removed.
     [String] GetRemoveMembersMessage([array] $members)
     {
@@ -154,7 +155,7 @@ Class Group : Entity
         }
         $this.SetDirty()
     }
-    
+#>
     # Sets/Gets Model
     [void] SetName($Name){
         $this.Name = $Name
@@ -164,7 +165,7 @@ Class Group : Entity
     }
 
     [void] Set(){
-        $script:LastSetID = $this.GetID()
+        #$script:LastSetID = $this.GetID()
         $this.Set(
             "Group '{0}' has been set." -f $this.GetIdentifier(),
             "Failed to set Group: '{0}'" -f $this.GetIdentifier()
@@ -178,42 +179,64 @@ Class Group : Entity
         )
     }
 
-    # Need to run some in-time code to get the appropriate IDs
-   [void] CommitStagedUpdates(){
-       if($this.GetDirtyProperties().keys -contains 'Members'){
-           foreach( $MemberStagedUpdate in $this.DirtyProperties['Members']){
-               foreach($key in $MemberStagedUpdate.keys){
-                    $MemberStagedUpdate.$key.Ids = @($this.QueryPossibleValuesByNumber($MemberStagedUpdate[$key].Ids).Id)
-                }
-           }
-       }
-        foreach($key in $this.GetDirtyProperties().keys ){
+    # 
+    <#[void] CommitStagedUpdates(){
 
-        }
         ([Entity]$this).CommitStagedUpdates()
+    }#>
+
+    # Returns an object containing the new value (possibly changed) and the comparison object
+    [psobject] CompareMembershipByNumber($Numbers){
+        #Remove numbers that need to be removed.
+        $Value = [System.Collections.ArrayList] ($this.GetMembersSelected() | Where-Object {$_.Number._value -In $Numbers.Number} )
+        $MemberNumbersToAdd = ($Numbers | Where-Object { $_.Number -NotIn $Value.Number._value}).Number
+        foreach($MemberNumberToAdd in $MemberNumbersToAdd){
+            $MemberToAdd = $this.QueryPossibleValuesByNumber($MemberNumberToAdd)
+            if($MemberToAdd){
+                $Value.Add($MemberToAdd)
+            }else{
+                # Invalid option warn and continue
+                continue
+            }
+            
+        }
+        $CurrentValue = Copy-Object $this.GetObjectValue("Members")
+        $Comparison = (Compare-Object -ReferenceObject $Value -DifferenceObject $CurrentValue.selected -Property 'Id')
+        # If different, change the "Current Value" to the new value
+        if($Comparison.count -gt 0){
+            $CurrentValue.selected = $Value
+        }
+
+        # Return members and the comparison
+        return @{ 'Members' = $CurrentValue; 'Comparison' = $Comparison}
     }
 
     # Stage an update on this object
     [void] Update([Array] $PropertyValues, $Value){
-        # If PropertyValues is @('Members')
-        if($null -eq (Compare-Object $PropertyValues @('Members'))){
-            # Return any numbers that should be added
-            $MemberNumbersToAdd = ($Value | Where-Object { $_.Number -NotIn ($this.GetMembersSelected()).Number._value}).Number
-            $MemberNumbersToDelete = ($this.GetMembersSelected() | Where-Object {$_.Number._value -NotIn $Value.Number} ).Number
-            $Value = [Collections.ArrayList] @()
-            if($MemberNumbersToAdd){
-                $Value += @{'Add' = @{"Ids" = @($MemberNumbersToAdd); "IsAllSelected" = $false; "Search" = ""}}
-            }
-            if($MemberNumbersToDelete){
-                $Value += @{'Delete' = @{"Ids" = @($MemberNumbersToDelete); "IsAllSelected" = $false; "Search" = ""}}
-            }
-            if($Value.count -eq 0){
-                return
-            }
-        }
-        ([Entity]$this).Update($PropertyValues, $Value)
+        ([Entity]$this).Update($PropertyValues, $Value,
+            ("Group Membership for '{0}' has been updated." -f $this.GetName()),
+            ("Failed to update Group Membership for: '{0}'." -f $this.GetName())
+        )
     }
 
+    # Functions used to convert CSV information for updates
+    [array] GetUpdatePayloads( $PropertyPath, $Values ){
+        $payloads = ,$Values
+        if($PropertyPath -eq 'Members'){
+            $payloads = [Collections.ArrayList] @()
+            $MembershipInfo = $this.GetDirtyProperties($PropertyPath)
+            $comparison = Compare-Object -ReferenceObject $Values.selected -DifferenceObject $MembershipInfo.OldValue.selected -Property 'Id'
+            $MemberIdsToDelete = $comparison | Where-Object {$_.SideIndicator -eq '=>'} | Select-Object -ExpandProperty 'Id'
+            $MemberIdsToAdd = $this.DirtyProperties.Members.NewValue.selected | Where-Object {$_.Id -in ($comparison | Where-Object {$_.SideIndicator -eq '<='} | Select-Object -ExpandProperty 'Id')} | Select-Object -ExpandProperty 'Id'
 
+            if($MemberIdsToDelete){
+                $payloads += @{'Delete' = @{"Ids" = @($MemberIdsToDelete); "IsAllSelected" = $false; "Search" = ""}}
+            }
+            if($MemberIdsToAdd){
+                $payloads += @{'Add' = @{"Ids" = @($MemberIdsToAdd); "IsAllSelected" = $false; "Search" = ""}}
+            }
+        }
 
+        return ([Entity]$this).GetUpdatePayloads($PropertyPath, $payloads)
+    }
 }

@@ -32,7 +32,7 @@ Class HotdeskingFactory : EntityFactory
     # Create Hotdesking based on specific ID
     [Hotdesking] makeHotdesking([string] $id)
     {
-        $payload = @{"id" = $id}
+        $payload = @{"id" = [int] $id}
         $responseObject = $this._endpoint.set($payload)
         return [Hotdesking]::new($responseObject, $this._endpoint)
     }

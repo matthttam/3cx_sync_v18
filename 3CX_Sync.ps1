@@ -24,6 +24,7 @@ Param(
 
     [Alias("NoGroupMembers")]
     [Switch] $NoGroupMemberships,   # Do not adjust any group memberships
+
     [Switch] $NoHotdesking,         # Do not create or update hotdesking
     [Switch] $NoNewHotdesking,      # Do not create hotdesking
     [Switch] $NoUpdateHotdesking,   # Do not update hotdesking
@@ -45,8 +46,8 @@ $dir = Split-Path $scriptpath
 Set-Location $dir
 
 # Setup Logging
-$logFile = Join-Path -path $dir -ChildPath 'log' | Join-Path -ChildPath "log-$(Get-date -f 'yyyyMMdd').txt";
-Set-PSFLoggingProvider -Name logfile -FilePath $logFile -Enabled $true;
+$logFile = Join-Path -path $dir -ChildPath 'log' | Join-Path -ChildPath "log-$(Get-date -f 'yyyyMMdd').txt"
+Set-PSFLoggingProvider -Name logfile -FilePath $logFile -Enabled $true -MaxLevel 3
 Write-PSFMessage -Level Output -Message 'Sync Started'
 
 ## Import Config config.json
@@ -63,7 +64,8 @@ $3CXApiConnection = [APIConnection]::New($config)
 try{
     $3CXApiConnection.login()
 }catch{
-    Write-Error 'Failed to connect to the 3CX Api with the provided config information.' -ErrorAction Stop
+    Write-PSFMessage -Level Critical -Message ('Failed to connect to the 3CX Api with the provided config information. ' + $_.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+    exit(1)
 }
 
 if(-NOT $NoExtensions){
@@ -78,15 +80,11 @@ if(-NOT $NoExtensions){
     try
     {
         $ExtensionImportCSV = [CSV]::New($ExtensionConfig.GetCSVPath())
-        
-        #Verify ImportData isn't Empty
-        if(-not $ExtensionImportCSV.Data.Count -gt 0){
-            Write-Error 'Import File is Empty' -ErrorAction Stop
-        }
     }
     catch
     {
-        Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+        Write-PSFMessage -Level Critical -Message ($_.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+        exit(1)
     }
 
     # Initialize ExtensionFactory
@@ -96,7 +94,8 @@ if(-NOT $NoExtensions){
     try{
         $Extensions = [Collections.ArrayList] $ExtensionFactory.GetExtensions()
     } catch {
-        Write-Error ('Failed to Look Up Extension List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
+        Write-PSFMessage -Level Critical -Message ('Failed to Look Up Extension List due to an unexpected error. ' + $_.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+        throw $_
     }
 
     $UpdateMappingCSVKeys = $UpdateMapping.GetCSVHeaders()
@@ -131,8 +130,8 @@ if(-NOT $NoExtensions){
                     if( $CurrentExtensionValue -ne $CSVValue)
                     {
                         try{
-                                $CurrentExtension.Update($ExtensionPropertyValues, $CSVValue)
-                                Write-PSFMessage -Level Output -Message (("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue)))
+                            $CurrentExtension.Update($ExtensionPropertyValues, $CSVValue)
+                            Write-PSFMessage -Level Output -Message (("Staged update to extension '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentExtensionNumber, $CSVHeader, $CurrentExtensionValue, $CSVValue)))
                         }catch{
                             Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Extension '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($CurrentExtensionNumber, $CSVHeader))
                             continue
@@ -144,7 +143,7 @@ if(-NOT $NoExtensions){
         # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
         }else{
             if($NoNewExtensions -eq $false){
-                Write-Verbose ("Need to Create Extension: '{0}'" -f $CurrentExtensionNumber)
+                Write-PSFMessage -Level Verbose -Message ("Need to Create Extension: '{0}'" -f $CurrentExtensionNumber)
 
                 # Begin building new extension
                 try{
@@ -208,19 +207,15 @@ if(-NOT $NoGroups){
     $UpdateMapping = $GroupConfig.Mapping.Update
     $GroupKeyHeader = $GroupConfig.GetKey()
  
-    ## Import Extension CSV File
+    ## Import Group CSV File
     try
     {
         $GroupImportCSV = [CSV]::New($GroupConfig.GetCSVPath())
-        
-        #Verify ImportData isn't Empty
-        if(-not $GroupImportCSV.Data.Count -gt 0){
-            Write-Error 'Import File is Empty' -ErrorAction Stop
-        }
     }
     catch
     {
-        Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+        Write-PSFMessage -Level Critical -Message ($_.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+        exit(1)
     }
 
     # Initialize ExtensionFactory
@@ -265,8 +260,8 @@ if(-NOT $NoGroups){
                     if( $CurrentGroupValue -ne $CSVValue)
                     {
                         try{
-                                $CurrentGroup.Update($GroupPropertyValues, $CSVValue)
-                                Write-PSFMessage -Level Output -Message (("Staged Update to Group '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentGroupKey, $CSVHeader, $CurrentGroupValue, $CSVValue)))
+                            $CurrentGroup.Update($GroupPropertyValues, $CSVValue)
+                            Write-PSFMessage -Level Output -Message (("Staged Update to Group '{0}' for field '{1}'. Old Value: '{2}' NewValue: '{3}'" -f ($CurrentGroupKey, $CSVHeader, $CurrentGroupValue, $CSVValue)))
                         }catch{
                             Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Group '{0}' for CSV Header {1} due to a staging error on update parameters." -f ($CurrentGroupKey, $CSVHeader))
                             continue
@@ -343,17 +338,15 @@ if(-NOT $NoGroupMemberships){
     $GroupMembershipConfig = [GroupMembershipConfig]::New($MappingPath)
 
     ## Import GroupMembership CSV File
+
     try
     {
         $GroupMembershipImportCSV = [CSV]::New($GroupMembershipConfig.GetCSVPath())
-        #Verify ImportData isn't Empty
-        if(-not $GroupMembershipImportCSV.Data.Count -gt 0){
-            Write-Error 'Import File is Empty' -ErrorAction Stop
-        }
     }
     catch
     {
-        Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+        Write-PSFMessage -Level Critical -Message ($_.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+        exit(1)
     }
 
     # Get GroupMembershipMapping
@@ -370,14 +363,36 @@ if(-NOT $NoGroupMemberships){
     }
     
     foreach( $CurrentGroup in $Groups ){
-        # Currently Selected Extensions that will be widdled down as we find them in the CSV
-        #$CachedSelected = [Collections.ArrayList] ($CurrentGroup.GetMembersSelected())
-        #$ExtensionsToAdd = @()
-        #$ExtensionsToRemove = @()
 
         $CSVGroupMembers = $GroupMembershipImportCSV.Data | Where-Object {$GroupMembershipMapping.EvaluateConditions($GroupMembershipMapping.GetConditionsByGroupName($CurrentGroup.GetName()), $_) }
-        #$CurrentGroup.StageMembershipUpdates($CSVGroupMembers)
-        $CurrentGroup.Update(@('Members'), $CSVGroupMembers)
+        
+        $Comparison = $CurrentGroup.CompareMembershipByNumber($CSVGroupMembers)
+        if($Comparison.comparison.count -gt 0){
+            try{
+                $CurrentGroup.Update(@('Members'), $Comparison.Members)
+
+                #Delete
+                $Comparison.Comparison | Where-Object {$_.SideIndicator -eq '=>'} | Select-Object -ExpandProperty 'Id'
+                $ToBeDeleted = $CurrentGroup.DirtyProperties.Members.OldValue.selected | Where-Object {$_.Id -in ($Comparison.Comparison | Where-Object {$_.SideIndicator -eq '=>'} | Select-Object -ExpandProperty 'Id')}
+                
+                #Add
+                $Comparison.Comparison | Where-Object {$_.SideIndicator -eq '<='} | Select-Object -ExpandProperty 'Id'
+                $ToBeAdded = $CurrentGroup.DirtyProperties.Members.NewValue.selected | Where-Object {$_.Id -in ($Comparison.Comparison | Where-Object {$_.SideIndicator -eq '<='} | Select-Object -ExpandProperty 'Id')}
+                $message = @()
+                if($ToBeAdded){
+                    $message += "Adding: " + ($ToBeAdded.Number._value -join ', ')
+                }
+                if($ToBeDeleted){
+                    $message += "Deleting: " + ($ToBeDeleted.Number._value -join ', ')
+                }
+                $message = $message -join '. '
+
+                Write-PSFMessage -Level Output -Message ("Staged update to Group '{0}' for membership. {1}'" -f ($CurrentGroup.GetName(), $message))
+            }catch{
+                Write-PSFMessage -Level Critical -Message ("Failed to Stage Update to Group '{0}' for membership. {1} due to a staging error on update parameters." -f ($CurrentGroup.GetName(), $message))
+                continue
+            }
+        }
 
         # If the current group is dirty, save the changes
         if($CurrentGroup.IsDirty())
@@ -399,14 +414,11 @@ if( -NOT $NoHotdesking){
     try
     {
         $HotdeskingImportCSV = [CSV]::New($HotdeskingConfig.GetCSVPath())
-        #Verify ImportData isn't Empty
-        if(-not $HotdeskingImportCSV.Data.Count -gt 0){
-            Write-Error 'Import File is Empty' -ErrorAction Stop
-        }
     }
     catch
     {
-        Write-Error ('Unexpected Error: ' + $PSItem.Exception.Message) -ErrorAction Stop
+        Write-PSFMessage -Level Critical -Message ($_.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+        exit(1)
     }
 
     # Initialize HotdeskingFactory

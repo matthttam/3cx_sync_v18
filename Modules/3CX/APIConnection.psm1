@@ -26,7 +26,6 @@ class APIConnection
         $LoginResponse = Invoke-WebRequest -Uri ('{0}/login' -f $this.BaseUrl) -Method Post -ContentType "application/json;charset=UTF-8" -Body $this.Credentials.ToString() -SessionVariable 'Session' -UseBasicParsing
         $this.Session = Get-Variable -name Session -ValueOnly
         if( $LoginResponse.Content -ne 'AuthSuccess' ){
-            Write-Error 'Failed to authenticate' -ErrorAction Stop
             throw [System.Security.Authentication.InvalidCredentialException]::new("Failed to authenticate")
         }
         $this.ConnectionSettings = @{
