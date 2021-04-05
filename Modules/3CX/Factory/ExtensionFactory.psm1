@@ -21,7 +21,7 @@ Class ExtensionFactory : EntityFactory
     }
 
     # Create extension objects from an array of extension objects
-    [Extension[]] makeExtension([PSObject[]] $objects){
+    [Extension[]] makeExtension([Array] $objects){
         $return = @()
         foreach($object in $objects)
         {

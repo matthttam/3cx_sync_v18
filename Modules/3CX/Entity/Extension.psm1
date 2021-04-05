@@ -12,7 +12,7 @@ Class Extension : Entity
     }
 
     [string] GetIdentifier(){
-        return ('Extension Number: {0}, EditID: {1}' -f $this.GetNumber(), $this.GetEditID())
+        return ("ID: '{0}', EditID: '{1}', Extension Number: '{2}'" -f $this.GetID(), $this.GetEditID(), $this.GetNumber())
     }
     # Sets/Gets Number
     # For a non-set object number will be stored in $this.number
@@ -26,30 +26,30 @@ Class Extension : Entity
        #$this.number = $number
     }
     [string] GetNumber(){
-        #if($this.object.number._value){
+        if($this.object.number._value){
             return $this.object.number._value
-       # }
-        #return $this.number
+        }
+        return $this.object.number
     }
 
     [void] Set(){
         $this.Set(
-            "Extension '{0}' has been set." -f $this.GetNumber(),
-            "Failed to set Extension: '{0}'" -f $this.GetNumber()
+            "Extension {0} has been set." -f $this.GetIdentifier(),
+            "Failed to set Extension: {0}" -f $this.GetIdentifier()
         )
     }
     
     [void] Save(){
         $this.Save(
-            "Extension '{0}' has been saved." -f $this.GetNumber(),
-            "Failed to save Extension: '{0}'" -f $this.GetNumber()
+            "Extension {0} has been saved." -f $this.GetIdentifier(),
+            "Failed to save Extension: {0}" -f $this.GetIdentifier()
         )
     }
 
     [void] Update($PropertyPath, $CSVValue){
         $this.Update($PropertyPath, $CSVValue,
-            "Extension '{0}' has been updated." -f $this.GetNumber(),
-            "Failed to update Extension: '{0}'" -f $this.GetNumber()
+            "Extension {0} has been updated." -f $this.GetIdentifier(),
+            "Failed to update Extension: {0}" -f $this.GetIdentifier()
         )
     }
 

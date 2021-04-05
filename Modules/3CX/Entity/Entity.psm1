@@ -129,10 +129,14 @@ Class Entity
             }
             $FormattedPropertyPath += $FormattedPath
         }
-        
+        $PayloadID = $this.GetEditID()
+        if($this.IsNew()){
+            $PayloadID = $this.GetID()
+        }
+
         $payload = @{
             "Path" = @{
-                "ObjectId" = $this.GetEditID()
+                "ObjectId" = $PayloadID
                 "PropertyPath" = $FormattedPropertyPath
             }
             "PropertyValue" = $Value
@@ -334,7 +338,6 @@ Class Entity
     }
     [void] Update($PropertyPath, $Value, $SuccessMessage, $FailMessage, $Info)
     {
-
         if ( $PSCmdlet.ShouldProcess($SuccessMessage, $this.GetIdentifier(), 'Update') ){
             try{
                 $dirtyProperty = @{'PropertyPath' = $PropertyPath; 'OldValue' = $this.GetObjectValue($PropertyPath); 'NewValue' = $Value; 'Info' = $Info}
@@ -343,7 +346,7 @@ Class Entity
                 }
                 $this.AddDirtyProperties( ($PropertyPath -join '.') , $dirtyProperty)
                 $this.SetDirty()
-                Write-PSFMessage -Level Output -Message ($SuccessMessage)
+                Write-PSFMessage -Level Debug -Message ($SuccessMessage)
             }catch{
                 Write-PSFMessage -Level Critical -Message ($FailMessage)
             }

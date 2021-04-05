@@ -157,7 +157,11 @@ if(-NOT $NoExtensions){
                 {
                     $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
+                    
+                    $message = ("Staged update to new extension {0} for field '{1}'. Value: '{2}'" -f ($NewExtension.GetIdentifier(), $CSVHeader, $CSVValue))
                     $NewExtension.Update($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
+                    Write-PSFMessage -Level Output -Message ($message)
+                    
                 }
                 $Extensions.Add($NewExtension)
             }
@@ -192,9 +196,7 @@ if(-NOT $NoExtensions){
     $ExtensionsToUpdate = $Extensions | Where-Object { $_.IsDirty() -eq $true }
 
     foreach($Extension in $ExtensionsToUpdate){
-        if($Extension.IsDirty()){
-            $Extension.save()
-        }
+        $Extension.save()
     }
 }
 
@@ -273,7 +275,7 @@ if(-NOT $NoGroups){
         # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
         }else{
             if($NoNewGroups -eq $false){
-                Write-Verbose ("Need to Create Group: '{0}'" -f $CurrentGroupNumber)
+                Write-PSFMessage -Level Verbose -Message ("Need to Create Group: '{0}'" -f $CurrentGroupNumber)
 
                 # Begin building new extension
                 try{
