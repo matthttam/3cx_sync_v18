@@ -275,7 +275,7 @@ if(-NOT $NoGroups){
         # If the row's CSVNumberHeader doesn't exist in the extentions list, Create
         }else{
             if($NoNewGroups -eq $false){
-                Write-PSFMessage -Level Verbose -Message ("Need to Create Group: '{0}'" -f $CurrentGroupNumber)
+                Write-PSFMessage -Level Verbose -Message ("Need to Create Group: '{0}'" -f $CurrentGroupKey)
 
                 # Begin building new extension
                 try{
@@ -290,10 +290,9 @@ if(-NOT $NoGroups){
                     $NewGroupValueAttributeInfo = $NewGroup.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewGroupValueAttributeInfo )
 
-                    $message = ("Staged update to new group '{0}' for field '{1}'. Value: '{2}'" -f ($CurrentGroupKey, $CSVHeader, $CSVValue))
+                    $message = ("Staged update to new group {0} for field '{1}'. Value: '{2}'" -f ($NewGroup.GetIdentifier(), $CSVHeader, $CSVValue))
                     $NewGroup.Update($NewMapping.GetAPIPathByCSVHeader($CSVHeader) , $CSVValue)
                     Write-PSFMessage -Level Output -Message ($message)
-                    
                 }
                 $Groups.Add($NewGroup)
             }
@@ -312,7 +311,7 @@ if(-NOT $NoGroups){
                 @{
                     'Name' = 'Add'
                     'ExceededMessage' = "Threshold for adding groups exceeded. Some groups will not be added."
-                    'CanceledMessage' = 'Update canceled for group {0}'
+                    'CanceledMessage' = 'Addition canceled for group {0}'
                     'ObjectsToChange' = $Extensions | Where-Object {$_.IsNew() -eq $true }
                     'TotalCount' = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
                 }
