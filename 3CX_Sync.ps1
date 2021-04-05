@@ -179,8 +179,8 @@ if(-NOT $NoExtensions){
                 },
                 @{
                     'Name' = 'Add'
-                    'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be updated."
-                    'CanceledMessage' = 'Update canceled for Extension {0}'
+                    'ExceededMessage' = "Threshold for adding extensions exceeded. Some extensions will not be added."
+                    'CanceledMessage' = 'Addition canceled for Extension {0}'
                     'ObjectsToChange' = $Extensions | Where-Object {$_.IsNew() -eq $true }
                     'TotalCount' = ($ExtensionImportCSV.Data | Where-Object { -not $_.Disabled -or $_.Disabled -eq 0 }).length
                 }
