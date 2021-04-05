@@ -21,7 +21,7 @@ Class ExtensionFactory : EntityFactory
     }
 
     # Create extension objects from an array of extension objects
-    [Extension[]] makeExtension([Array] $objects){
+    [Extension[]] makeExtension([PSObject[]] $objects){
         $return = @()
         foreach($object in $objects)
         {
@@ -33,7 +33,6 @@ Class ExtensionFactory : EntityFactory
     #Create an instance of a single extension using a provided object
     [Extension] makeExtension([PSObject] $object)
     {
-        #return $this.makeExtension($object.)
         return [Extension]::new($object, $this._endpoint)
     }
 
@@ -56,9 +55,6 @@ Class ExtensionFactory : EntityFactory
     {
         $responseObject = $this._endpoint.New()
         return [Extension]::new($responseObject, $this._endpoint)
-        #return [Extension]::new(@{'IsNew'=$true}, $this._endpoint)
-    
     }
-
 
 }

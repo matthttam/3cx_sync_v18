@@ -10,7 +10,6 @@
         "Key":  "Number",
         "New": 
 				{
-                        "Number":  "Number",
 						"FirstName":  "FirstName",
 						"LastName":  "LastName",
 						"Email":  "Email",

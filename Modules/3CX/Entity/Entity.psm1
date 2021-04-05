@@ -337,11 +337,11 @@ Class Entity
 
         if ( $PSCmdlet.ShouldProcess($SuccessMessage, $this.GetIdentifier(), 'Update') ){
             try{
-                $value = @{'PropertyPath' = $PropertyPath; 'OldValue' = $this.GetObjectValue($PropertyPath); 'NewValue' = $Value; 'Info' = $Info}
+                $dirtyProperty = @{'PropertyPath' = $PropertyPath; 'OldValue' = $this.GetObjectValue($PropertyPath); 'NewValue' = $Value; 'Info' = $Info}
                 if( -NOT $this.GetObjectValue($PropertyPath).type -eq [ValueType]::Object ){
                     $this.SetObjectValue($PropertyPath, $Value)
                 }
-                $this.AddDirtyProperties( ($PropertyPath -join '.') , $value)
+                $this.AddDirtyProperties( ($PropertyPath -join '.') , $dirtyProperty)
                 $this.SetDirty()
                 Write-PSFMessage -Level Output -Message ($SuccessMessage)
             }catch{

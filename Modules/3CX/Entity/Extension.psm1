@@ -4,7 +4,7 @@ Using module ..\Endpoints\ExtensionListEndpoint.psm1
 Class Extension : Entity
 {
     [ExtensionListEndpoint] $_endpoint
-    [String] $number
+    #[String] $number
 
     Extension($object, $endpoint) : base($object, $endpoint)
     {
@@ -23,13 +23,13 @@ Class Extension : Entity
         if($this.object.number._value){
             $this.object.number._value = $number
         }
-        $this.number = $number
+       #$this.number = $number
     }
     [string] GetNumber(){
-        if($this.object.number._value){
+        #if($this.object.number._value){
             return $this.object.number._value
-        }
-        return $this.number
+       # }
+        #return $this.number
     }
 
     [void] Set(){

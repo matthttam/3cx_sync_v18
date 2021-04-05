@@ -153,7 +153,7 @@ if(-NOT $NoExtensions){
                     continue
                 }
 
-                foreach( $CSVHeader in $NewMappingCSVKeys)
+                foreach( $CSVHeader in ,$ExtensionKeyHeader + $NewMappingCSVKeys)
                 {
                     $NewExtensionValueAttributeInfo = $NewExtension.GetObjectAttributeInfo($NewMapping.GetAPIPathByCSVHeader($CSVHeader))
                     $CSVValue = $NewMapping.ConvertToType( $row.$CSVHeader, $NewExtensionValueAttributeInfo )
