@@ -68,6 +68,7 @@ try{
     exit(1)
 }
 
+# Sync Extensions
 if(-NOT $NoExtensions){
     ## Import Config\Mapping.json > Extension
     $ExtensionConfig = [ExtensionConfig]::New($MappingPath)
@@ -107,10 +108,10 @@ if(-NOT $NoExtensions){
         $CurrentExtensionNumber = $row.$ExtensionKeyHeader
 
         # If this extension number exists in 3CX
-        if($CurrentExtensionNumber -in ($Extensions | ForEach-Object {$_.GetNumber()}) ){
+        if($CurrentExtensionNumber -in ($Extensions | ForEach-Object {$_.Get($GroupKeyHeader)}) ){
             if($NoUpdateExtensions -eq $false){
                 # Pull current extension object from the array
-                $CurrentExtension = $Extensions | Where-Object { $_.GetNumber() -eq $CurrentExtensionNumber }
+                $CurrentExtension = $Extensions | Where-Object { $_.Get($GroupKeyHeader) -eq $CurrentExtensionNumber }
                 
                 # Populate this extension with extended fields by setting it in 3CX
                 $CurrentExtension.Set()
@@ -200,7 +201,7 @@ if(-NOT $NoExtensions){
     }
 }
 
-# Update Groups
+# Sync Groups
 if(-NOT $NoGroups){
     ## Import Config\Mapping.json > Extension
     $GroupConfig = [GroupConfig]::New($MappingPath)
@@ -227,7 +228,8 @@ if(-NOT $NoGroups){
     try{
         $Groups = [Collections.ArrayList] $GroupFactory.GetGroups()
     } catch {
-        Write-Error ('Failed to Look Up Group List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop
+        Write-PSFMessage -Level Critical -Message ('Failed to Look Up Group List due to an unexpected error. ' + $PSItem.Exception.Message) -ErrorAction Stop -Exception $_.Exception
+        throw $_
     }
 
     $UpdateMappingCSVKeys = $UpdateMapping.GetMappingCSVKeys()
