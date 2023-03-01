@@ -287,7 +287,7 @@ if (-NOT $NoGroupMemberships) {
                 if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetAddMembersMessage($ExtensionsToAdd))) {
                     #Stage Adding Members, continue on error
                     try {
-                        $CurrentGroup.AddMembers($ExtensionsToAdd);
+                        $response = $CurrentGroup.AddMembers($ExtensionsToAdd);
                     }
                     catch {
                         continue
@@ -305,7 +305,7 @@ if (-NOT $NoGroupMemberships) {
                 if ($PSCmdlet.ShouldProcess($CurrentGroup.GetName(), $CurrentGroup.GetRemoveMembersMessage($ExtensionsToRemove))) {
                     #Stage Removing Members, continue on error
                     try {
-                        $CurrentGroup.RemoveMembers($ExtensionsToRemove);
+                        $response = $CurrentGroup.RemoveMembers($ExtensionsToRemove);
                     }
                     catch {
                         continue
