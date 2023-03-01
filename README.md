@@ -3,9 +3,10 @@
 I am an independent developer and am in no way associated or affiliated with 3CX Ltd. This software comes with no warranty and no guarantee of any kind. That being said, I work very hard to ensure this program continues to work and until 3CX has a solution for syncing Extensions and Groups this will be maintained.
 
 ### NOTICE ###
-This application is not compatible with older versions of 3CX. It support specifically version 16.0.641. Updates to 3CX may break functionality.
+This application may not be compatible with older versions of 3CX. It support specifically version 18.0.6.908. Updates to 3CX may break functionality.
 Version 2.0.1 = 3CX Version 16+ But less than 16.0.641
 Version 3.0.0 = 3CX Version 16.0.641
+Version 3.0.1 = 3CX Version 18.0.6.908
 
 ### What is this repository for? ###
 
@@ -17,7 +18,7 @@ Version 3.0.0 = 3CX Version 16.0.641
 * Administrator account to a 3CX installation running version 16.0.641+
 
 ### How do I get set up? ###
-* Checkout the latest master branch
+* Checkout the latest release branch
 * Run the setup.ps1 script to generate the initial config
 * A JSON mapping file named Mapping.json must be created to match CSV headers to API field paths in 3CX. See below for more details.
 
@@ -57,6 +58,12 @@ Make a copy of the Mapping.json.example file. Here I'll explain the basic struct
 * If you have questions feel free to file an Issue or contact the repo owner
 
 ### Releases ###
+##### 3.0.1 - Minor Upgrade #####
+* Bug Fixes
+	* Fields now match case sensitively. This is to help fix a bug in 3CX 18.6 which prevents Google authentication if the capitalization of the email is not the same in 3CX as it is in Google.
+	* Fixed erroneous output of group object during membership updates.
+* Known Issues
+	* 3CX 18.0.6.908 no longer supports extensions starting with a leading zero such as 002 or 08123. This can cause extension creations and updates to fail. The behavior of updates for extensions like these can unexpectedly fail. If you encounter this issue contact your vendor as this is a 3CX issue.
 ##### 3.0.0 - Major Upgrade #####
 * Overhaul of Group Memberships
 	* Much faster at comparing group memberships so long as a group doesn't require ALL extensions to be added
